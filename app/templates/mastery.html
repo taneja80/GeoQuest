@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Country Mastery{% endblock %}
+
+{% block head_extra %}
+<style>
+  .mastery-overview {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+  .mastery-chip {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 18px 24px;
+    text-align: center;
+    flex: 1;
+    min-width: 110px;
+  }
+  .mastery-chip-value {
+    font-family: 'Outfit', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+  .mastery-chip-label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+  }
+  .star-section {
+    margin-bottom: 28px;
+  }
+  .star-section-header {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 800;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .star-section-count {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .mastery-country-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  .mastery-country-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    text-align: center;
+    transition: all var(--transition);
+  }
+  .mastery-country-card:hover {
+    border-color: rgba(255,255,255,0.15);
+    transform: translateY(-2px);
+  }
+  .mastery-flag {
+    width: 48px;
+    height: 32px;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-bottom: 8px;
+  }
+  .mastery-name {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mastery-stars {
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+  }
+  .mastery-cats {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .empty-section {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    padding: 12px;
+    border: 1px dashed rgba(255,255,255,0.08);
+    border-radius: var(--radius-sm);
+    text-align: center;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="animate-fade">
+  <span class="section-label">⭐ Country Mastery</span>
+  <h1 style="margin-bottom: 8px;">Master Every Country</h1>
+  <p style="margin-bottom: 24px;">Answer correctly across 5 different categories to fully master a country.</p>
+
+  <div class="mastery-overview">
+    <div class="mastery-chip">
+      <div class="mastery-chip-value" style="color: var(--accent);">{{ mastery.mastered }}</div>
+      <div class="mastery-chip-label">Mastered ⭐⭐⭐⭐⭐</div>
+    </div>
+    <div class="mastery-chip">
+      <div class="mastery-chip-value" style="color: var(--primary);">{{ mastery.in_progress }}</div>
+      <div class="mastery-chip-label">In Progress</div>
+    </div>
+    <div class="mastery-chip">
+      <div class="mastery-chip-value" style="color: var(--text-muted);">{{ mastery.untouched }}</div>
+      <div class="mastery-chip-label">Untouched</div>
+    </div>
+    <div class="mastery-chip">
+      <div class="mastery-chip-value" style="color: var(--text);">{{ mastery.total }}</div>
+      <div class="mastery-chip-label">Total Countries</div>
+    </div>
+  </div>
+
+  {% for star_level in range(5, -1, -1) %}
+    {% set items = by_stars[star_level] %}
+    {% if items %}
+    <div class="star-section">
+      <div class="star-section-header">
+        <span>
+          {% for i in range(star_level) %}⭐{% endfor %}
+          {% for i in range(star_level, 5) %}☆{% endfor %}
+        </span>
+        <span>{{ star_level }}-Star</span>
+        <span class="star-section-count">({{ items|length }})</span>
+      </div>
+      <div class="mastery-country-grid">
+        {% for item in items %}
+        <a href="{{ url_for('main.country_detail', name=item.country.name) }}" class="mastery-country-card" style="text-decoration: none;">
+          {% if item.country.flag_url_svg or item.country.flag_url_png %}
+          <img src="{{ item.country.flag_url_svg or item.country.flag_url_png }}" alt="{{ item.country.name }}" class="mastery-flag">
+          {% endif %}
+          <div class="mastery-name">{{ item.country.name }}</div>
+          <div class="mastery-stars">
+            {% for i in range(item.mastery.stars) %}⭐{% endfor %}{% for i in range(item.mastery.stars, 5) %}☆{% endfor %}
+          </div>
+          <div class="mastery-cats">{{ item.mastery.categories_correct | join(', ') if item.mastery.categories_correct else '' }}</div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  {% endfor %}
+
+  {% if mastery.mastered == 0 and mastery.in_progress == 0 %}
+  <div class="empty-section">
+    <p style="font-size: 2rem; margin-bottom: 8px;">🌍</p>
+    <p>No countries started yet. Play quizzes to begin mastering the world!</p>
+    <a href="{{ url_for('main.quiz') }}" class="btn btn-primary" style="margin-top: 12px;">Start Playing 🎮</a>
+  </div>
+  {% endif %}
+
+  <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 24px;">
+    <a href="{{ url_for('main.progress_report') }}" class="btn btn-ghost" style="font-size: 0.8rem;">📊 Progress</a>
+    <a href="{{ url_for('main.quiz_history') }}" class="btn btn-ghost" style="font-size: 0.8rem;">📜 History</a>
+    <a href="{{ url_for('main.quiz') }}" class="btn btn-primary" style="font-size: 0.8rem;">🎮 Play Quiz</a>
+  </div>
+</div>
+{% endblock %}

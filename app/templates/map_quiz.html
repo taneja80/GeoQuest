@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}Map Quiz{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  .mq-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-md); padding: 24px;
+    max-width: 900px; margin: 0 auto;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.37);
+  }
+  .mq-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+  .mq-flag { width: 56px; height: 38px; object-fit: cover; border-radius: 6px; }
+  .mq-country { font-family: 'Outfit', sans-serif; font-size: 1.4rem; font-weight: 800; }
+  .mq-hint { color: var(--text-muted); font-size: 0.9rem; }
+  #mqMap { width: 100%; height: 450px; border-radius: var(--radius-sm); margin-bottom: 16px; }
+  .mq-result { text-align: center; font-size: 1.1rem; font-weight: 800; margin-top: 12px; }
+  .mq-result.perfect { color: var(--success); }
+  .mq-result.good { color: var(--primary); }
+  .mq-result.ok { color: var(--accent); }
+  .mq-result.miss { color: var(--danger); }
+  .mq-score-bar { display: flex; justify-content: center; gap: 24px; margin-top: 16px; }
+  .mq-score-item { text-align: center; }
+  .mq-score-item .val { font-size: 1.4rem; font-weight: 900; }
+  .mq-score-item .lbl { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="animate-fade">
+  <span class="section-label">📍 Map Quiz</span>
+  <h1 style="margin-bottom: 8px;">Where in the World?</h1>
+  <p style="margin-bottom: 32px;">Click on the map to locate the country!</p>
+
+  <div class="mq-card">
+    <div class="mq-header" id="mqHeader">
+      <img id="mqFlag" src="" class="mq-flag" style="display:none;">
+      <div>
+        <div class="mq-country" id="mqCountry">Loading…</div>
+        <div class="mq-hint">Click on the map where you think this country is!</div>
+      </div>
+    </div>
+    <div id="mqMap"></div>
+    <div class="mq-result" id="mqResult" style="display:none;"></div>
+    <div class="mq-score-bar">
+      <div class="mq-score-item"><div class="val" id="mqRound">1</div><div class="lbl">Round</div></div>
+      <div class="mq-score-item"><div class="val" id="mqCorrect">0</div><div class="lbl">Correct</div></div>
+      <div class="mq-score-item"><div class="val" id="mqXP">0</div><div class="lbl">XP Earned</div></div>
+    </div>
+    <div style="text-align: center; margin-top: 16px;">
+      <button class="btn btn-primary" id="mqNext" style="display:none;" onclick="loadQuestion()">Next Question →</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const map = L.map('mqMap', { worldCopyJump: true }).setView([20, 0], 2);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap © CARTO', maxZoom: 18
+}).addTo(map);
+
+let target = null;
+let answered = false;
+let round = 0;
+let correctCount = 0;
+let xpTotal = 0;
+let markers = [];
+
+function clearMarkers() {
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+}
+
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function loadQuestion() {
+  answered = false;
+  clearMarkers();
+  document.getElementById('mqResult').style.display = 'none';
+  document.getElementById('mqNext').style.display = 'none';
+  document.getElementById('mqCountry').textContent = 'Loading…';
+  document.getElementById('mqFlag').style.display = 'none';
+
+  fetch('{{ url_for("main.api_map_quiz_question") }}')
+    .then(r => r.json())
+    .then(data => {
+      target = data;
+      round++;
+      document.getElementById('mqRound').textContent = round;
+      document.getElementById('mqCountry').textContent = data.country_name;
+      if (data.flag_url) {
+        document.getElementById('mqFlag').src = data.flag_url;
+        document.getElementById('mqFlag').style.display = 'block';
+      }
+    });
+}
+
+map.on('click', function(e) {
+  if (answered || !target) return;
+  answered = true;
+
+  const dist = haversine(e.latlng.lat, e.latlng.lng, target.target_lat, target.target_lng);
+
+  // Show user click
+  const userMarker = L.circleMarker([e.latlng.lat, e.latlng.lng], {
+    radius: 8, color: '#f7c948', fillColor: '#f7c948', fillOpacity: 0.8
+  }).addTo(map).bindPopup('Your guess');
+  markers.push(userMarker);
+
+  // Show correct location
+  const correctMarker = L.circleMarker([target.target_lat, target.target_lng], {
+    radius: 8, color: '#4ade80', fillColor: '#4ade80', fillOpacity: 0.8
+  }).addTo(map).bindPopup(target.country_name);
+  markers.push(correctMarker);
+
+  // Draw a line
+  const line = L.polyline([
+    [e.latlng.lat, e.latlng.lng],
+    [target.target_lat, target.target_lng]
+  ], { color: 'rgba(255,255,255,0.3)', dashArray: '5,10' }).addTo(map);
+  markers.push(line);
+
+  // Submit to server
+  fetch('{{ url_for("main.api_map_quiz_answer") }}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ distance_km: dist }),
+  })
+    .then(r => r.json())
+    .then(data => {
+      const res = document.getElementById('mqResult');
+      if (data.distance_km < 500) {
+        res.className = 'mq-result perfect';
+        res.textContent = `🎯 Amazing! Only ${data.distance_km} km away! +${data.xp_earned} XP`;
+      } else if (data.distance_km < 1500) {
+        res.className = 'mq-result good';
+        res.textContent = `✅ Good! ${data.distance_km} km away. +${data.xp_earned} XP`;
+        correctCount++;
+      } else if (data.distance_km < 3000) {
+        res.className = 'mq-result ok';
+        res.textContent = `🟡 Not bad! ${data.distance_km} km away. +${data.xp_earned} XP`;
+      } else {
+        res.className = 'mq-result miss';
+        res.textContent = `❌ Off by ${data.distance_km} km. Keep exploring!`;
+      }
+      if (data.distance_km < 500) correctCount++;
+      xpTotal += data.xp_earned;
+      document.getElementById('mqCorrect').textContent = correctCount;
+      document.getElementById('mqXP').textContent = xpTotal;
+
+      res.style.display = 'block';
+      document.getElementById('mqNext').style.display = 'inline-block';
+    });
+});
+
+loadQuestion();
+</script>
+{% endblock %}

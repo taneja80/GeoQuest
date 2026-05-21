@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Leaderboard{% endblock %}
+
+{% block content %}
+<div class="animate-fade" style="max-width: 700px; margin: 0 auto;">
+    <span class="section-label">🏆 Hall of Fame</span>
+    <h1>Leaderboard</h1>
+    <p style="margin-bottom: 28px;">Top geography champions. Can you claim the crown? 👑</p>
+
+    {% if users %}
+    <table class="leaderboard-table">
+        <thead>
+            <tr>
+                <th>Rank</th>
+                <th>Hero</th>
+                <th>Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>
+                    {% if loop.index == 1 %}
+                    <span class="rank-badge gold">1</span>
+                    {% elif loop.index == 2 %}
+                    <span class="rank-badge silver">2</span>
+                    {% elif loop.index == 3 %}
+                    <span class="rank-badge bronze">3</span>
+                    {% else %}
+                    <span class="rank-badge">{{ loop.index }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ user.username }}</td>
+                <td><span class="score-pill">{{ user.score }} pts</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align:center; padding: 60px 20px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md);">
+        <div style="font-size: 3rem; margin-bottom: 16px;">🎮</div>
+        <p style="font-size: 1.1rem;">No scores yet — be the first on the board!</p>
+        <a href="{{ url_for('main.quiz') }}" class="btn" style="margin-top: 16px;">Play Now 🚀</a>
+    </div>
+    {% endif %}
+
+    <div class="flex-center mt-4">
+        <a href="{{ url_for('main.quiz') }}" class="btn">🎮 Play Quiz</a>
+    </div>
+</div>
+{% endblock %}

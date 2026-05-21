@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}404 - Not Found{% endblock %}
+{% block content %}
+<div class="error-page animate-fade">
+    <div class="error-code">404</div>
+    <h2 style="font-size: 1.8rem; margin: 16px 0 8px;">Page Not Found</h2>
+    <p style="font-size: 1.1rem; margin-bottom: 32px;">Looks like this part of the world hasn't been discovered yet!</p>
+    <a href="{{ url_for('main.index') }}" class="btn">🏠 Back to Home</a>
+</div>
+{% endblock %}

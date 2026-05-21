@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Two Truths and a Lie{% endblock %}
+
+{% block head_extra %}
+<style>
+  .ttal-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 36px 28px;
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.37);
+  }
+  .ttal-flag {
+    width: 80px; height: 54px; object-fit: cover;
+    border-radius: 8px; margin-bottom: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .ttal-country { font-family: 'Outfit', sans-serif; font-size: 1.6rem; font-weight: 800; margin-bottom: 8px; }
+  .ttal-subtitle { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px; }
+  .statement-btn {
+    display: block; width: 100%; text-align: left;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: var(--radius-sm); padding: 16px 20px;
+    color: var(--text); font-size: 0.95rem; font-weight: 600;
+    cursor: pointer; transition: all var(--transition); margin-bottom: 10px;
+  }
+  .statement-btn:hover:not(.revealed) {
+    border-color: var(--primary); background: rgba(99,202,183,0.08);
+    transform: translateX(4px);
+  }
+  .statement-btn .idx { color: var(--primary); font-weight: 800; margin-right: 10px; }
+  .statement-btn.correct-pick { border-color: var(--success); background: rgba(74,222,128,0.12); }
+  .statement-btn.wrong-pick { border-color: var(--danger); background: rgba(248,113,113,0.12); }
+  .statement-btn.highlight-lie { border-color: var(--accent); background: rgba(247,201,72,0.12); }
+  .ttal-result { margin-top: 20px; font-size: 1.1rem; font-weight: 800; }
+  .ttal-result.win { color: var(--success); }
+  .ttal-result.lose { color: var(--danger); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="animate-fade">
+  <span class="section-label">🤥 Two Truths and a Lie</span>
+  <h1 style="margin-bottom: 8px;">Spot the Lie!</h1>
+  <p style="margin-bottom: 32px;">Two statements are true, one is false. Can you find the lie?</p>
+
+  {% if question %}
+  <div class="ttal-card" id="ttalCard">
+    {% if question.flag_url %}
+    <img src="{{ question.flag_url }}" alt="{{ question.country_name }}" class="ttal-flag">
+    {% endif %}
+    <div class="ttal-country">{{ question.country_name }}</div>
+    <div class="ttal-subtitle">Which statement is the LIE?</div>
+
+    {% for stmt in question.statements %}
+    <button class="statement-btn" data-index="{{ loop.index0 }}" onclick="submitTTAL(this, {{ loop.index0 }})">
+      <span class="idx">{{ loop.index }}</span>{{ stmt }}
+    </button>
+    {% endfor %}
+
+    <div class="ttal-result" id="ttalResult" style="display:none;"></div>
+    <a href="{{ url_for('main.two_truths') }}" class="btn btn-primary" id="ttalNext" style="display:none; margin-top: 16px;">Next Question →</a>
+  </div>
+  {% else %}
+  <div class="ttal-card">
+    <p>Could not generate a question. Not enough country data yet!</p>
+    <a href="{{ url_for('main.quiz') }}" class="btn btn-primary" style="margin-top: 16px;">Play Quiz Instead 🎮</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+let answered = false;
+function submitTTAL(btn, index) {
+  if (answered) return;
+  answered = true;
+
+  const form = new FormData();
+  form.append('answer_index', index);
+
+  fetch('{{ url_for("main.two_truths") }}', { method: 'POST', body: form })
+    .then(r => r.json())
+    .then(data => {
+      const btns = document.querySelectorAll('.statement-btn');
+      btns.forEach(b => b.classList.add('revealed'));
+
+      // Highlight the lie
+      btns[data.correct_index].classList.add('highlight-lie');
+
+      if (data.correct) {
+        btn.classList.add('correct-pick');
+        document.getElementById('ttalResult').className = 'ttal-result win';
+        document.getElementById('ttalResult').textContent = '🎉 Correct! You found the lie! +15 XP';
+      } else {
+        btn.classList.add('wrong-pick');
+        document.getElementById('ttalResult').className = 'ttal-result lose';
+        document.getElementById('ttalResult').textContent = '❌ Nope! The lie was highlighted in gold.';
+      }
+      document.getElementById('ttalResult').style.display = 'block';
+      document.getElementById('ttalNext').style.display = 'inline-block';
+    });
+}
+</script>
+{% endblock %}

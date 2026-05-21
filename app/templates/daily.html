@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Daily Challenge{% endblock %}
+
+{% block content %}
+<div class="quiz-wrapper animate-fade">
+    <span class="section-label">📅 Daily Challenge</span>
+    <h1 style="margin-bottom: 8px;">Question of the Day</h1>
+    <p style="margin-bottom: 6px;">One question per day. Bonus XP + daily streak multiplier!</p>
+
+    <div style="text-align:center; margin-bottom: 24px;">
+        <span class="diff-badge" style="font-size: 0.95rem;">
+            🔥 Daily Streak: <strong>{{ daily_streak }}</strong> day{{ 's' if daily_streak != 1 }}
+        </span>
+    </div>
+
+    {% if already_done %}
+    <div id="quiz-container" style="text-align:center; padding: 60px 32px;">
+        <div style="font-size: 4rem; margin-bottom: 16px;">✅</div>
+        <h2 style="margin: 0 0 8px; color: var(--success);">Already Completed!</h2>
+        <p>You've already finished today's challenge. Come back tomorrow!</p>
+        <p style="margin-top: 16px;">
+            <span class="diff-badge">🔥 Streak: {{ daily_streak }} day{{ 's' if daily_streak != 1 }}</span>
+        </p>
+        <a href="{{ url_for('main.quiz') }}" class="btn" style="margin-top: 24px;">🎮 Play Regular Quiz</a>
+    </div>
+
+    {% elif question %}
+    <div id="quiz-container">
+        <form id="daily-form">
+            {% if question.image_url %}
+            <div style="text-align:center;">
+                <img src="{{ question.image_url }}" alt="Quiz Image"
+                     style="max-width:220px; border-radius:10px; border:1px solid var(--border); box-shadow:0 8px 24px rgba(0,0,0,0.4); margin-bottom:20px;">
+            </div>
+            {% endif %}
+
+            <p id="question-text">{{ question.question_text }}</p>
+
+            <div class="quiz-options" id="quiz-options">
+                {% for option in question.options %}
+                <input type="radio" name="answer" value="{{ option }}" id="daily_opt_{{ loop.index }}" required>
+                <label for="daily_opt_{{ loop.index }}" class="quiz-option-label">{{ option }}</label>
+                {% endfor %}
+            </div>
+
+            <div style="text-align:center;">
+                <button type="submit" class="btn" id="daily-submit">🌟 Submit Answer</button>
+            </div>
+        </form>
+
+        <div id="daily-result" style="display:none; margin-top: 20px;"></div>
+    </div>
+
+    {% else %}
+    <div id="quiz-container" style="text-align:center; padding: 60px 32px;">
+        <p>Could not load today's question. Please try again later.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+const form = document.getElementById('daily-form');
+const resultDiv = document.getElementById('daily-result');
+const submitBtn = document.getElementById('daily-submit');
+
+if (form) {
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const fd = new FormData(form);
+        if (!fd.get('answer')) return;
+        submitBtn.disabled = true;
+
+        fetch('{{ url_for("main.daily_challenge") }}', { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    resultDiv.style.display = 'block';
+                    resultDiv.className = 'incorrect';
+                    resultDiv.textContent = data.error;
+                    return;
+                }
+
+                // Highlight correct
+                document.querySelectorAll('.quiz-option-label').forEach(label => {
+                    const input = document.getElementById(label.htmlFor);
+                    if (!input) return;
+                    if (input.value === data.correct_answer_was) {
+                        label.style.borderColor = 'rgba(74,222,128,0.7)';
+                        label.style.background = 'rgba(74,222,128,0.12)';
+                        label.style.color = '#4ade80';
+                    } else if (input.checked && !data.correct) {
+                        label.style.borderColor = 'rgba(248,113,113,0.7)';
+                        label.style.background = 'rgba(248,113,113,0.12)';
+                        label.style.color = '#f87171';
+                    }
+                    input.disabled = true;
+                });
+
+                resultDiv.style.display = 'block';
+                if (data.correct) {
+                    resultDiv.className = 'correct';
+                    resultDiv.innerHTML = `🎉 Correct! +${data.bonus} bonus XP! &nbsp; 🔥 Streak: ${data.daily_streak}`;
+                } else {
+                    resultDiv.className = 'incorrect';
+                    resultDiv.innerHTML = `The answer was <strong>${data.correct_answer_was}</strong>. Try again tomorrow!`;
+                }
+            })
+            .catch(() => {
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'incorrect';
+                resultDiv.textContent = 'Connection error.';
+                submitBtn.disabled = false;
+            });
+    });
+}
+</script>
+{% endblock %}

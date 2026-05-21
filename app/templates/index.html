@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="hero-section animate-fade">
+    <span class="section-label">🌍 Geography Learning App</span>
+    <h1>Explore the World<br>with GeoQuest</h1>
+    <p class="subtitle">
+        Discover every country, continent, and natural wonder on Earth — then put your knowledge to the test!
+    </p>
+    <div class="hero-actions">
+        <a href="{{ url_for('main.quiz') }}" class="btn">🎮 Play Quiz</a>
+        <a href="{{ url_for('main.daily_challenge') }}" class="btn btn-accent">📅 Daily Challenge</a>
+        <a href="{{ url_for('main.list_countries') }}" class="btn btn-ghost">🌐 Explore Countries</a>
+    </div>
+    <div class="stats-row">
+        <div class="stat-chip">🌐 <span>195+</span> Countries</div>
+        <div class="stat-chip">🗺️ <span>7</span> Continents</div>
+        <div class="stat-chip">🌊 <span>5</span> Oceans</div>
+        <div class="stat-chip">🏔️ <span>10</span> Mountains</div>
+    </div>
+</div>
+
+<hr class="divider">
+
+<h2>Discover Continents</h2>
+<div class="continents-grid">
+    {% set icons = {
+        'Africa': '🌍',
+        'Antarctica': '🧊',
+        'Asia': '🏯',
+        'Europe': '🗼',
+        'North America': '🗽',
+        'Oceania': '🦘',
+        'South America': '🌿'
+    } %}
+    {% for continent in continents %}
+    <a href="{{ url_for('main.continent_detail', name=continent.name) }}" class="continent-card">
+        <span class="icon">{{ icons.get(continent.name, '🗺️') }}</span>
+        <span class="name">{{ continent.name }}</span>
+        <span class="desc">{{ continent.description[:80] }}...</span>
+    </a>
+    {% else %}
+    <p>No continents found. Please initialize the database.</p>
+    {% endfor %}
+</div>
+
+{% if random_countries %}
+<hr class="divider">
+<h2>✨ Featured Countries</h2>
+<ul class="card-grid">
+    {% for country in random_countries %}
+    <li>
+        <a href="{{ url_for('main.country_detail', name=country.name) }}">{{ country.name }}</a>
+        {% if country.flag_url_svg %}
+        <img src="{{ country.flag_url_svg }}" alt="Flag of {{ country.name }}">
+        {% elif country.flag_url_png %}
+        <img src="{{ country.flag_url_png }}" alt="Flag of {{ country.name }}">
+        {% endif %}
+        {% if country.capital %}<span style="font-size:0.82rem; color:var(--text-muted);">🏙️ {{ country.capital }}</span>{% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

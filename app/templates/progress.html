@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+{% block title %}Weekly Progress{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  .progress-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 28px;
+    margin-top: 24px;
+  }
+  @media (min-width: 900px) {
+    .progress-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .progress-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 28px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.37);
+  }
+  .progress-card h3 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.15rem;
+    margin-bottom: 18px;
+    color: var(--text);
+  }
+  .summary-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+  .summary-chip {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: var(--radius-sm);
+    padding: 16px 20px;
+    text-align: center;
+    flex: 1;
+    min-width: 120px;
+  }
+  .chip-value {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1.2;
+  }
+  .chip-value.accent { color: var(--accent); }
+  .chip-value.danger { color: var(--danger); }
+  .chip-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+  }
+  .chart-wrap {
+    position: relative;
+    max-width: 340px;
+    margin: 0 auto;
+  }
+  .strength-badge {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 99px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    margin: 4px;
+  }
+  .strength-badge.strong {
+    background: rgba(74,222,128,0.12);
+    border: 1px solid var(--success);
+    color: var(--success);
+  }
+  .strength-badge.weak {
+    background: rgba(248,113,113,0.12);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+  }
+  .mastery-bar-wrap {
+    background: rgba(255,255,255,0.06);
+    border-radius: 99px;
+    height: 18px;
+    overflow: hidden;
+    margin: 8px 0;
+  }
+  .mastery-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.8s ease;
+  }
+  .mastery-bar-fill.gold { background: linear-gradient(90deg, var(--accent), #fbbf24); }
+  .mastery-bar-fill.green { background: linear-gradient(90deg, var(--primary), #34d399); }
+  .mastery-bar-fill.grey { background: rgba(255,255,255,0.15); }
+  .day-bar-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 120px;
+    margin-top: 12px;
+  }
+  .day-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .day-bar {
+    width: 100%;
+    border-radius: 6px 6px 0 0;
+    min-height: 4px;
+    transition: height 0.5s ease;
+  }
+  .day-bar.correct { background: var(--primary); }
+  .day-bar.total { background: rgba(255,255,255,0.08); }
+  .day-label {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-weight: 700;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--text-muted);
+  }
+  .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+  .quick-links {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="animate-fade">
+  <span class="section-label">📊 Weekly Progress</span>
+  <h1 style="margin-bottom: 8px;">Your Progress Report</h1>
+  <p style="margin-bottom: 32px;">Performance over the last 7 days &middot; Skills &middot; Mastery</p>
+
+  {% if report.total_questions == 0 %}
+  <div class="progress-card">
+    <div class="empty-state">
+      <div class="icon">📊</div>
+      <h3>No activity yet this week</h3>
+      <p>Play some quizzes to see your progress here!</p>
+      <a href="{{ url_for('main.quiz') }}" class="btn btn-primary" style="margin-top: 16px;">Play Quiz 🎮</a>
+    </div>
+  </div>
+  {% else %}
+
+  <!-- Summary Chips -->
+  <div class="summary-row">
+    <div class="summary-chip">
+      <div class="chip-value">{{ report.total_questions }}</div>
+      <div class="chip-label">Questions</div>
+    </div>
+    <div class="summary-chip">
+      <div class="chip-value accent">{{ report.correct }}</div>
+      <div class="chip-label">Correct</div>
+    </div>
+    <div class="summary-chip">
+      <div class="chip-value" style="color: {% if report.accuracy >= 70 %}var(--success){% elif report.accuracy >= 40 %}var(--accent){% else %}var(--danger){% endif %}">{{ report.accuracy }}%</div>
+      <div class="chip-label">Accuracy</div>
+    </div>
+    <div class="summary-chip">
+      <div class="chip-value">{{ report.new_countries_mastered }}</div>
+      <div class="chip-label">Mastered 🌟</div>
+    </div>
+  </div>
+
+  <div class="progress-grid">
+    <!-- Radar Chart: Skill Breakdown -->
+    <div class="progress-card">
+      <h3>🎯 Skill Radar</h3>
+      <div class="chart-wrap">
+        <canvas id="radarChart"></canvas>
+      </div>
+      {% if report.strongest or report.weakest %}
+      <div style="text-align: center; margin-top: 16px;">
+        {% if report.strongest %}
+          <span class="strength-badge strong">💪 {{ report.strongest }}</span>
+        {% endif %}
+        {% if report.weakest %}
+          <span class="strength-badge weak">📖 {{ report.weakest }}</span>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Daily Activity Chart -->
+    <div class="progress-card">
+      <h3>📅 Daily Activity</h3>
+      <div class="day-bar-chart">
+        {% set max_total = report.by_day|map(attribute='total')|max %}
+        {% for d in report.by_day %}
+        <div class="day-col">
+          {% if max_total > 0 %}
+          <div class="day-bar total" style="height: {{ (d.total / max_total * 100) | int }}px;"></div>
+          <div class="day-bar correct" style="height: {{ (d.correct / max_total * 100) | int }}px; margin-top: -{{ (d.correct / max_total * 100) | int }}px;"></div>
+          {% else %}
+          <div class="day-bar total" style="height: 4px;"></div>
+          {% endif %}
+          <span class="day-label">{{ d.day }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      <div style="display: flex; gap: 16px; justify-content: center; margin-top: 12px; font-size: 0.75rem;">
+        <span style="color: var(--text-muted);"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:rgba(255,255,255,0.08);margin-right:4px;vertical-align:middle;"></span>Total</span>
+        <span style="color: var(--text-muted);"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--primary);margin-right:4px;vertical-align:middle;"></span>Correct</span>
+      </div>
+    </div>
+
+    <!-- Mastery Overview -->
+    <div class="progress-card">
+      <h3>⭐ Country Mastery</h3>
+      <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+        <div style="text-align: center; flex: 1;">
+          <div style="font-size: 2rem; font-weight: 800; color: var(--accent);">{{ mastery.mastered }}</div>
+          <div class="chip-label">Mastered (5★)</div>
+        </div>
+        <div style="text-align: center; flex: 1;">
+          <div style="font-size: 2rem; font-weight: 800; color: var(--primary);">{{ mastery.in_progress }}</div>
+          <div class="chip-label">In Progress</div>
+        </div>
+        <div style="text-align: center; flex: 1;">
+          <div style="font-size: 2rem; font-weight: 800; color: var(--text-muted);">{{ mastery.untouched }}</div>
+          <div class="chip-label">Untouched</div>
+        </div>
+      </div>
+      <div class="mastery-bar-wrap">
+        {% set mastered_pct = (mastery.mastered / mastery.total * 100) if mastery.total > 0 else 0 %}
+        {% set progress_pct = (mastery.in_progress / mastery.total * 100) if mastery.total > 0 else 0 %}
+        <div style="display:flex; height:100%;">
+          <div class="mastery-bar-fill gold" style="width: {{ mastered_pct|round(1) }}%"></div>
+          <div class="mastery-bar-fill green" style="width: {{ progress_pct|round(1) }}%"></div>
+        </div>
+      </div>
+      <div style="text-align: center; margin-top: 8px; font-size: 0.8rem; color: var(--text-muted);">
+        {{ mastery.mastered }}/{{ mastery.total }} countries fully mastered
+      </div>
+      <div style="text-align: center; margin-top: 12px;">
+        <a href="{{ url_for('main.mastery') }}" class="btn btn-ghost" style="font-size: 0.8rem; padding: 8px 16px;">View All Countries ⭐</a>
+      </div>
+    </div>
+
+    <!-- Skill Breakdown Table -->
+    <div class="progress-card">
+      <h3>📋 Category Breakdown</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <th style="text-align: left; padding: 8px 0; font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">Category</th>
+            <th style="text-align: center; padding: 8px 0; font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">Answered</th>
+            <th style="text-align: center; padding: 8px 0; font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">Correct</th>
+            <th style="text-align: right; padding: 8px 0; font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">Accuracy</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for key, s in skill_stats.items() %}
+          {% if s.total > 0 %}
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+            <td style="padding: 10px 0; font-weight: 700;">{{ s.label }}</td>
+            <td style="text-align: center; color: var(--text-muted);">{{ s.total }}</td>
+            <td style="text-align: center; color: var(--primary);">{{ s.correct }}</td>
+            <td style="text-align: right;">
+              <span style="color: {% if s.pct >= 70 %}var(--success){% elif s.pct >= 40 %}var(--accent){% else %}var(--danger){% endif %}; font-weight: 800;">{{ s.pct }}%</span>
+            </td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% endif %}
+
+  <div class="quick-links">
+    <a href="{{ url_for('main.quiz_history') }}" class="btn btn-ghost" style="font-size: 0.8rem;">📜 Quiz History</a>
+    <a href="{{ url_for('main.mastery') }}" class="btn btn-ghost" style="font-size: 0.8rem;">⭐ Country Mastery</a>
+    <a href="{{ url_for('main.my_profile') }}" class="btn btn-ghost" style="font-size: 0.8rem;">👤 Profile</a>
+    <a href="{{ url_for('main.quiz') }}" class="btn btn-primary" style="font-size: 0.8rem;">🎮 Play Quiz</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+{% if report.total_questions > 0 %}
+<script>
+const ctx = document.getElementById('radarChart').getContext('2d');
+const skillData = {{ skill_stats | tojson }};
+const labels = [];
+const values = [];
+for (const [key, s] of Object.entries(skillData)) {
+  if (s.total > 0) {
+    labels.push(s.label);
+    values.push(s.pct);
+  }
+}
+if (labels.length >= 3) {
+  new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Accuracy %',
+        data: values,
+        backgroundColor: 'rgba(99,202,183,0.15)',
+        borderColor: 'rgba(99,202,183,0.8)',
+        borderWidth: 2,
+        pointBackgroundColor: '#63cab7',
+        pointBorderColor: '#fff',
+        pointRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        r: {
+          beginAtZero: true,
+          max: 100,
+          ticks: { stepSize: 20, color: '#8a94a8', backdropColor: 'transparent', font: { size: 10 } },
+          grid: { color: 'rgba(255,255,255,0.06)' },
+          angleLines: { color: 'rgba(255,255,255,0.06)' },
+          pointLabels: { color: '#e8edf5', font: { size: 12, weight: '700' } },
+        }
+      },
+      plugins: {
+        legend: { display: false },
+      }
+    }
+  });
+} else {
+  document.getElementById('radarChart').parentElement.innerHTML =
+    '<p style="text-align:center;color:var(--text-muted);padding:40px 0;">Answer questions in at least 3 categories to see your radar chart.</p>';
+}
+</script>
+{% endif %}
+{% endblock %}

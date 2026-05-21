@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}{{ continent.name }}{% endblock %}
+
+{% block content %}
+<div class="animate-fade">
+    {% set icons = {
+        'Africa': '🌍',
+        'Antarctica': '🧊',
+        'Asia': '🏯',
+        'Europe': '🗼',
+        'North America': '🗽',
+        'Oceania': '🦘',
+        'South America': '🌿'
+    } %}
+
+    <span class="section-label">🗺️ Continent</span>
+    <h1>{{ icons.get(continent.name, '🗺️') }} {{ continent.name }}</h1>
+    {% if continent.description %}
+    <p style="max-width: 680px; font-size: 1.05rem; margin: 12px 0 24px;">{{ continent.description }}</p>
+    {% endif %}
+
+    <!-- Geographic Stats Dashboard -->
+    <div class="infographic-row" style="margin-bottom: 28px;">
+        {% if continent.area_sq_km %}
+        <div class="infographic-tile">
+            <span class="infographic-icon">📐</span>
+            <div class="infographic-value">{{ "{:,.0f}".format(continent.area_sq_km) }} km²</div>
+            <div class="infographic-label">Total Area</div>
+            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">{{ "{:,.0f}".format(continent.area_sq_km * 1000000) }} m²</div>
+        </div>
+        {% endif %}
+        {% if continent.population %}
+        <div class="infographic-tile">
+            <span class="infographic-icon">👥</span>
+            <div class="infographic-value">{{ "{:,.0f}".format(continent.population / 1000000) }}M</div>
+            <div class="infographic-label">Population</div>
+        </div>
+        {% endif %}
+        <div class="infographic-tile">
+            <span class="infographic-icon">🌐</span>
+            <div class="infographic-value">{{ countries|length }}</div>
+            <div class="infographic-label">Countries</div>
+        </div>
+        {% if continent.latitude is not none and continent.longitude is not none %}
+        <div class="infographic-tile">
+            <span class="infographic-icon">📍</span>
+            <div class="infographic-value" style="font-size: 1rem;">{{ "%.1f"|format(continent.latitude) }}°{{ "N" if continent.latitude >= 0 else "S" }}, {{ "%.1f"|format(continent.longitude|abs) }}°{{ "E" if continent.longitude >= 0 else "W" }}</div>
+            <div class="infographic-label">Center Coordinates</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Geographic Details Card -->
+    {% if continent.highest_point or continent.lowest_point or continent.timezones %}
+    <div class="detail-card mb-4">
+        <h2>🏔️ Geographic Details</h2>
+        {% if continent.highest_point %}
+        <p style="margin-bottom: 8px;"><strong>⛰️ Highest Point:</strong> {{ continent.highest_point }}</p>
+        {% endif %}
+        {% if continent.lowest_point %}
+        <p style="margin-bottom: 8px;"><strong>⬇️ Lowest Point:</strong> {{ continent.lowest_point }}</p>
+        {% endif %}
+        {% if continent.latitude is not none %}
+        <p style="margin-bottom: 8px;"><strong>🌡️ Climate Zone:</strong>
+            {% if continent.latitude|abs <= 23.4366 %}
+            🌴 Primarily Tropical
+            {% elif continent.latitude|abs <= 66.5634 %}
+            🌤️ Primarily Temperate
+            {% else %}
+            ❄️ Polar
+            {% endif %}
+        </p>
+        {% endif %}
+        {% if continent.timezones %}
+        <p style="margin-bottom: 6px;"><strong>🕐 Time Zones:</strong></p>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            {% for tz in continent.timezones.split(', ') %}
+            <span class="badge" style="font-size: 0.75rem;">{{ tz }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <h2>Countries in {{ continent.name }}</h2>
+    {% if countries %}
+    <ul class="card-grid">
+        {% for country in countries %}
+        <li>
+            <a href="{{ url_for('main.country_detail', name=country.name) }}">{{ country.name }}</a>
+            {% if country.flag_url_svg %}
+            <img src="{{ country.flag_url_svg }}" alt="Flag of {{ country.name }}">
+            {% elif country.flag_url_png %}
+            <img src="{{ country.flag_url_png }}" alt="Flag of {{ country.name }}">
+            {% endif %}
+            {% if country.capital %}
+            <span style="font-size:0.8rem; color:var(--text-muted);">🏙️ {{ country.capital }}</span>
+            {% endif %}
+            {% if country.area %}
+            <span style="font-size:0.72rem; color:var(--text-muted);">📐 {{ "{:,.0f}".format(country.area) }} km²</span>
+            {% endif %}
+            {% if country.population %}
+            <span style="font-size:0.72rem; color:var(--text-muted);">👥 {{ "{:,.0f}".format(country.population) }}</span>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p>No countries listed for this continent yet.</p>
+    {% endif %}
+
+    <div class="flex-center mt-4">
+        <a href="{{ url_for('main.list_continents') }}" class="btn btn-ghost">← All Continents</a>
+    </div>
+</div>
+{% endblock %}

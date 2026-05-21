@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Continents{% endblock %}
+
+{% block content %}
+<div class="animate-fade">
+    <span class="section-label">🗺️ World Geography</span>
+    <h1>Explore Continents</h1>
+    <p style="margin-bottom: 28px;">Earth is divided into 7 continents — click one to explore all its countries.</p>
+
+    {% set icons = {
+        'Africa': '🌍',
+        'Antarctica': '🧊',
+        'Asia': '🏯',
+        'Europe': '🗼',
+        'North America': '🗽',
+        'Oceania': '🦘',
+        'South America': '🌿'
+    } %}
+
+    <div class="continents-grid">
+        {% for continent in continents %}
+        <a href="{{ url_for('main.continent_detail', name=continent.name) }}" class="continent-card">
+            <span class="icon">{{ icons.get(continent.name, '🗺️') }}</span>
+            <span class="name">{{ continent.name }}</span>
+            {% if continent.description %}
+            <span class="desc">{{ continent.description[:90] }}...</span>
+            {% endif %}
+        </a>
+        {% else %}
+        <p>No continents available.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Comparison Quiz{% endblock %}
+
+{% block head_extra %}
+<style>
+  .cmp-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 36px 28px;
+    max-width: 650px;
+    margin: 0 auto;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.37);
+  }
+  .cmp-question { font-family: 'Outfit', sans-serif; font-size: 1.4rem; font-weight: 800; margin-bottom: 28px; }
+  .cmp-vs { display: flex; gap: 20px; justify-content: center; align-items: stretch; flex-wrap: wrap; }
+  .cmp-option {
+    flex: 1; min-width: 200px; max-width: 280px;
+    background: rgba(255,255,255,0.03); border: 2px solid rgba(255,255,255,0.08);
+    border-radius: var(--radius-md); padding: 28px 20px;
+    cursor: pointer; transition: all var(--transition);
+    text-align: center;
+  }
+  .cmp-option:hover:not(.revealed) {
+    border-color: var(--primary); background: rgba(99,202,183,0.08);
+    transform: translateY(-4px); box-shadow: 0 8px 20px rgba(99,202,183,0.15);
+  }
+  .cmp-flag { width: 80px; height: 54px; object-fit: cover; border-radius: 8px; margin-bottom: 12px; }
+  .cmp-name { font-family: 'Outfit', sans-serif; font-size: 1.2rem; font-weight: 800; }
+  .cmp-option.correct { border-color: var(--success); background: rgba(74,222,128,0.12); }
+  .cmp-option.wrong { border-color: var(--danger); background: rgba(248,113,113,0.12); opacity: 0.7; }
+  .cmp-vs-badge {
+    display: flex; align-items: center; font-size: 1.8rem; font-weight: 900;
+    color: var(--accent); padding: 0 8px;
+  }
+  .cmp-result { margin-top: 24px; font-size: 1.1rem; font-weight: 800; }
+  .cmp-result.win { color: var(--success); }
+  .cmp-result.lose { color: var(--danger); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="animate-fade">
+  <span class="section-label">⚖️ Comparison Quiz</span>
+  <h1 style="margin-bottom: 8px;">Which is…?</h1>
+  <p style="margin-bottom: 32px;">Compare two countries — pick the correct one!</p>
+
+  {% if question %}
+  <div class="cmp-card">
+    <div class="cmp-question">{{ question.question_text }}</div>
+    <div class="cmp-vs">
+      {% for opt in question.options %}
+      <div class="cmp-option" data-name="{{ opt.name }}" onclick="submitCmp(this, '{{ opt.name }}')">
+        {% if opt.flag %}
+        <img src="{{ opt.flag }}" alt="{{ opt.name }}" class="cmp-flag">
+        {% endif %}
+        <div class="cmp-name">{{ opt.name }}</div>
+      </div>
+      {% if not loop.last %}
+      <div class="cmp-vs-badge">VS</div>
+      {% endif %}
+      {% endfor %}
+    </div>
+    <div class="cmp-result" id="cmpResult" style="display:none;"></div>
+    <a href="{{ url_for('main.comparison_quiz') }}" class="btn btn-primary" id="cmpNext" style="display:none; margin-top: 16px;">Next Question →</a>
+  </div>
+  {% else %}
+  <div class="cmp-card">
+    <p>Could not generate a comparison question.</p>
+    <a href="{{ url_for('main.quiz') }}" class="btn btn-primary" style="margin-top: 16px;">Play Quiz 🎮</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+let answered = false;
+function submitCmp(el, name) {
+  if (answered) return;
+  answered = true;
+
+  const form = new FormData();
+  form.append('answer', name);
+
+  fetch('{{ url_for("main.comparison_quiz") }}', { method: 'POST', body: form })
+    .then(r => r.json())
+    .then(data => {
+      document.querySelectorAll('.cmp-option').forEach(o => {
+        o.classList.add('revealed');
+        if (o.dataset.name === data.correct_answer) o.classList.add('correct');
+        else o.classList.add('wrong');
+      });
+      const res = document.getElementById('cmpResult');
+      if (data.correct) {
+        res.className = 'cmp-result win';
+        res.textContent = '🎉 Correct! +12 XP';
+      } else {
+        res.className = 'cmp-result lose';
+        res.textContent = '❌ Wrong! The answer was ' + data.correct_answer;
+      }
+      res.style.display = 'block';
+      document.getElementById('cmpNext').style.display = 'inline-block';
+    });
+}
+</script>
+{% endblock %}

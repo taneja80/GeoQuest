@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}About GeoQuest{% endblock %}
+
+{% block content %}
+<div class="animate-fade" style="max-width: 760px; margin: 0 auto;">
+    <span class="section-label">ℹ️ About</span>
+    <h1>About GeoQuest</h1>
+    <p style="font-size: 1.1rem; margin: 16px 0 36px; max-width: 600px;">
+        GeoQuest is an educational geography app that makes learning about the world fun and interactive — for kids and curious adults alike!
+    </p>
+
+    <div class="detail-grid">
+        <div class="detail-card">
+            <h2>🌍 Countries</h2>
+            <p>Browse detailed profiles of 195+ countries — flags, capitals, populations, languages, currencies, and more.</p>
+        </div>
+        <div class="detail-card">
+            <h2>🗺️ Continents</h2>
+            <p>Explore all 7 continents and the countries within each one. Understand how the world is divided geographically.</p>
+        </div>
+        <div class="detail-card">
+            <h2>🔭 Discover</h2>
+            <p>Dive into oceans, mountain ranges, rivers, deserts, forests, volcanoes, and the wonders of the world.</p>
+        </div>
+        <div class="detail-card">
+            <h2>🎮 Quiz Game</h2>
+            <p>Test your geography knowledge with 4 question types: capitals, flags, population, and area. Earn points, beat the leaderboard!</p>
+        </div>
+    </div>
+
+    <div class="flex-center mt-4">
+        <a href="{{ url_for('main.quiz') }}" class="btn">🚀 Start Quiz</a>
+        <a href="{{ url_for('main.list_countries') }}" class="btn btn-ghost">🌐 Explore Countries</a>
+    </div>
+</div>
+{% endblock %}

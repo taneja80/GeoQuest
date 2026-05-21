@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}My Collection{% endblock %}
+
+{% block content %}
+<div class="animate-fade">
+    <span class="section-label">🃏 Country Cards</span>
+    <h1 style="margin-bottom: 8px;">My Collection</h1>
+    <p style="margin-bottom: 24px;">
+        Answer quiz questions correctly to collect country cards!
+        <strong style="color: var(--accent);">{{ count }}/{{ total }}</strong> collected.
+    </p>
+
+    <!-- Progress bar -->
+    <div class="collection-progress-wrap">
+        <div class="collection-progress-bar" style="width: {{ (count / total * 100) if total > 0 else 0 }}%"></div>
+    </div>
+
+    {% if collected %}
+    <div class="collection-grid">
+        {% for country in collected %}
+        <a href="{{ url_for('main.country_detail', name=country.name) }}" class="collection-card">
+            {% if country.flag_url_svg or country.flag_url_png %}
+            <img src="{{ country.flag_url_svg or country.flag_url_png }}" alt="{{ country.name }}" class="collection-flag">
+            {% else %}
+            <div class="collection-flag-placeholder">🏳️</div>
+            {% endif %}
+            <div class="collection-info">
+                <strong>{{ country.name }}</strong>
+                {% if country.capital %}<span>🏙️ {{ country.capital }}</span>{% endif %}
+                {% if country.continent_name %}<span>🌍 {{ country.continent_name }}</span>{% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center; padding: 60px 20px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md); margin-top: 24px;">
+        <div style="font-size: 3rem; margin-bottom: 16px;">🃏</div>
+        <p>No cards collected yet! Play the quiz to start your collection.</p>
+        <a href="{{ url_for('main.quiz') }}" class="btn" style="margin-top: 16px;">🎮 Play Quiz</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

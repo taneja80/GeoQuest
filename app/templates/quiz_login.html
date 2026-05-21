@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Quiz Start{% endblock %}
+
+{% block content %}
+<div class="quiz-login-wrapper animate-fade" style="max-width: 680px;">
+    <span class="section-label">🎮 Geography Arena</span>
+    <h1 style="margin-bottom: 8px;">Choose Your Challenge</h1>
+    <p style="margin-bottom: 32px;">Pick a game mode and test your geography knowledge!</p>
+
+    <div class="mode-grid">
+        {% for mode_key, mode in modes.items() %}
+        <form method="POST" action="{{ url_for('main.quiz', mode=mode_key) }}" class="mode-card">
+            <input type="hidden" name="start_quiz" value="1">
+            <input type="hidden" name="mode" value="{{ mode_key }}">
+            <div class="mode-icon">{{ mode.icon }}</div>
+            <h3>{{ mode.name }}</h3>
+            <p>{{ mode.description }}</p>
+            <div class="mode-meta">
+                {% if mode.timer_sec > 0 %}<span>⏱️ {{ mode.timer_sec }}s</span>{% else %}<span>⏱️ No timer</span>{% endif %}
+                <span>{{ '%.1g' | format(mode.xp_multiplier) }}× XP</span>
+            </div>
+            <button type="submit" class="btn {% if mode_key == 'lightning' %}btn-accent{% endif %}" style="width:100%; margin-top: 12px;">
+                Play {{ mode.name }}
+            </button>
+        </form>
+        {% endfor %}
+    </div>
+
+    <div style="display: flex; justify-content: center; gap: 16px; margin-top: 32px; font-size: 0.85rem;">
+        <a href="{{ url_for('main.daily_challenge') }}" style="font-weight: 700;">📅 Daily Challenge</a>
+        <span style="color: rgba(255,255,255,0.15);">|</span>
+        <a href="{{ url_for('main.my_profile') }}" style="font-weight: 700;">👤 My Profile</a>
+        <span style="color: rgba(255,255,255,0.15);">|</span>
+        <a href="{{ url_for('main.leaderboard') }}" style="font-weight: 700;">🏆 Leaderboard</a>
+    </div>
+</div>
+{% endblock %}

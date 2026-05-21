@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Mission Complete!{% endblock %}
+
+{% block head_extra %}
+<style>
+  .mc-card {
+    background: var(--bg-card); border: 1px solid var(--success);
+    border-radius: var(--radius-md); padding: 40px 32px;
+    max-width: 550px; margin: 0 auto; text-align: center;
+    box-shadow: 0 8px 32px rgba(74,222,128,0.15);
+  }
+  .mc-icon { font-size: 4rem; margin-bottom: 16px; }
+  .mc-title { font-family: 'Outfit', sans-serif; font-size: 1.8rem; font-weight: 800; color: var(--success); margin-bottom: 8px; }
+  .mc-subtitle { color: var(--text-muted); margin-bottom: 24px; }
+  .mc-stats { display: flex; justify-content: center; gap: 32px; margin-bottom: 24px; }
+  .mc-stat .val { font-size: 1.6rem; font-weight: 900; }
+  .mc-stat .lbl { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="animate-fade">
+  <div class="mc-card">
+    <div class="mc-icon">{{ mission.icon }}</div>
+    <div class="mc-title">{{ mission.name }} Complete!</div>
+    <div class="mc-subtitle">You've completed this mission. Well done, explorer!</div>
+
+    <div class="mc-stats">
+      <div class="mc-stat">
+        <div class="val">{{ progress.correct_count }}/{{ mission.question_count }}</div>
+        <div class="lbl">Correct</div>
+      </div>
+      <div class="mc-stat">
+        <div class="val">+{{ mission.xp_reward }}</div>
+        <div class="lbl">XP Earned</div>
+      </div>
+    </div>
+
+    <a href="{{ url_for('main.missions') }}" class="btn btn-primary">Back to Missions →</a>
+  </div>
+</div>
+{% endblock %}

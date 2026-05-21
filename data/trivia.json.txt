@@ -1,0 +1,9 @@
+[
+    {
+        "country_cca3": "FRA",
+        "facts": [
+            "France is famous for the Eiffel Tower.",
+            "The Louvre Museum in Paris is one of the world's largest art museums."
+        ]
+    }
+]

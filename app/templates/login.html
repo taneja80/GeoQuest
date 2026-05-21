@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Log In{% endblock %}
+
+{% block content %}
+<div class="quiz-login-wrapper animate-fade">
+    <span class="section-label">👤 Welcome Back</span>
+    <h1 style="margin-bottom: 8px;">Claim Your Glory!</h1>
+    <p style="margin-bottom: 32px;">Log in to access your custom profile, review unlocked achievements, and resume playing.</p>
+
+    <div class="quiz-login-card">
+        <div style="font-size: 3.5rem; margin-bottom: 16px;">🔑</div>
+        <h2 style="margin: 0 0 20px; color: var(--text); font-size: 1.4rem;">Log In to GeoQuest</h2>
+
+        {% if error %}
+        <div style="background: rgba(248,113,113,0.15); border: 1px solid var(--danger); color: var(--danger); padding: 10px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-size: 0.9rem; text-align: left;">
+            ⚠️ {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('main.login') }}">
+            <div style="text-align: left; margin-bottom: 16px;">
+                <label for="username" style="display: block; font-weight: 700; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;">Username</label>
+                <input type="text" name="username" id="username" placeholder="Your username..." required autocomplete="off" style="width: 100%;">
+            </div>
+
+            <div style="text-align: left; margin-bottom: 24px;">
+                <label for="password" style="display: block; font-weight: 700; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;">Password</label>
+                <input type="password" name="password" id="password" placeholder="Your password..." required style="width: 100%;">
+            </div>
+
+            <button type="submit" class="btn" style="width: 100%; margin-top: 8px;">Log In & Play 🚀</button>
+        </form>
+
+        <p style="margin-top: 24px; font-size: 0.85rem; color: var(--text-muted);">
+            New explorer? <a href="{{ url_for('main.register') }}" style="font-weight:700;">Register here</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

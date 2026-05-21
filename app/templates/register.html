@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<div class="quiz-login-wrapper animate-fade">
+    <span class="section-label">👤 Create Account</span>
+    <h1 style="margin-bottom: 8px;">Join the Quest!</h1>
+    <p style="margin-bottom: 32px;">Create a proper user account to save your scores, unlock custom badges, and climb the global leaderboard!</p>
+
+    <div class="quiz-login-card">
+        <div style="font-size: 3.5rem; margin-bottom: 16px;">🚀</div>
+        <h2 style="margin: 0 0 20px; color: var(--text); font-size: 1.4rem;">Register Account</h2>
+
+        {% if error %}
+        <div style="background: rgba(248,113,113,0.15); border: 1px solid var(--danger); color: var(--danger); padding: 10px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-size: 0.9rem; text-align: left;">
+            ⚠️ {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('main.register') }}">
+            <div style="text-align: left; margin-bottom: 16px;">
+                <label for="username" style="display: block; font-weight: 700; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;">Username</label>
+                <input type="text" name="username" id="username" placeholder="Choose a hero name..." required autocomplete="off" style="width: 100%;" minlength="3">
+            </div>
+
+            <div style="text-align: left; margin-bottom: 24px;">
+                <label for="password" style="display: block; font-weight: 700; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;">Password</label>
+                <input type="password" name="password" id="password" placeholder="Choose a password..." required style="width: 100%;" minlength="4">
+            </div>
+
+            <button type="submit" class="btn" style="width: 100%; margin-top: 8px;">Create Account & Play 🚀</button>
+        </form>
+
+        <p style="margin-top: 24px; font-size: 0.85rem; color: var(--text-muted);">
+            Already have an account? <a href="{{ url_for('main.login') }}" style="font-weight:700;">Log In here</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,593 @@
+{% extends "base.html" %}
+{% block title %}{{ country.name }}{% endblock %}
+
+{% block head_extra %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+<style>
+.detail-two-col {
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr;
+  gap: 28px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .detail-two-col {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+.hero-flag-container {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.hero-flag-container img {
+  border-radius: 50%;
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  box-shadow: var(--glow-primary);
+  border: 3px solid var(--primary);
+  transition: transform var(--transition), border-color var(--transition);
+}
+.hero-flag-container img:hover {
+  transform: scale(1.06) rotate(3deg);
+  border-color: var(--accent);
+  box-shadow: var(--glow-accent);
+}
+.flag-tooltip {
+  position: absolute;
+  top: 105%;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: rgba(10, 14, 26, 0.96);
+  border: 1.5px solid var(--primary);
+  box-shadow: var(--glow-primary);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: max-content;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 100;
+  backdrop-filter: blur(8px);
+}
+.hero-flag-container:hover .flag-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.flag-tooltip span {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#mini-map {
+  position: relative;
+  z-index: 1;
+}
+.back-btn-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 40px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="animate-fade">
+    <!-- Hero Header -->
+    <div class="country-hero">
+        <div class="hero-flag-container">
+            {% if country.flag_url_svg %}
+            <img src="{{ country.flag_url_svg }}" alt="Flag of {{ country.name }}">
+            {% elif country.flag_url_png %}
+            <img src="{{ country.flag_url_png }}" alt="Flag of {{ country.name }}">
+            {% endif %}
+            <div class="flag-tooltip">
+                {% if country.capital %}<span>🏙️ {{ country.capital }}</span>{% endif %}
+                <span>🌍 {{ country.continent_name or 'Africa' }}</span>
+                {% if country.driving_side %}<span>🚗 Drives {{ country.driving_side | title }}</span>{% endif %}
+                {% if country.landlocked is not none %}
+                <span>{{ '🏝️ Landlocked' if country.landlocked else '🌊 Has Coastline' }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="country-hero-text">
+            <span class="section-label">{{ country.continent_name or 'World' }}</span>
+            <h1>{{ country.name }}</h1>
+            {% if country.native_name and country.native_name != country.name %}
+            <p style="font-size: 1.3rem; font-weight: 700; color: var(--accent); margin: 2px 0 0; font-style: italic; letter-spacing: 0.5px;">{{ country.native_name }}</p>
+            {% endif %}
+            {% if country.official_name and country.official_name != country.name %}
+            <p class="official-name">{{ country.official_name }}</p>
+            {% endif %}
+            {% if country.historic_name %}
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 4px 0 0; font-style: italic;">Historically known as <span style="color: var(--primary); font-weight: 600;">{{ country.historic_name }}</span></p>
+            {% endif %}
+            <div style="margin-top: 14px; display:flex; flex-wrap:wrap; gap:6px;">
+                {% if country.capital %}<span class="badge">🏙️ {{ country.capital }}</span>{% endif %}
+                {% if country.region %}<span class="badge">📍 {{ country.region }}</span>{% endif %}
+                {% if country.driving_side %}<span class="badge">🚗 Drives {{ country.driving_side }}</span>{% endif %}
+                {% if country.landlocked is not none %}
+                <span class="badge">{{ '🏝️ Landlocked' if country.landlocked else '🌊 Has Coastline' }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Two-Column Layout -->
+    <div class="detail-two-col">
+        <!-- Left Column: Statistics Dashboard & Facts -->
+        <div>
+            <!-- Infographics Statistics Dashboard -->
+            <div class="infographic-row">
+                <!-- Population -->
+                <div class="infographic-tile">
+                    <span class="infographic-icon">👥</span>
+                    <div class="infographic-value">{{ "{:,}".format(country.population) if country.population else 'N/A' }}</div>
+                    <div class="infographic-label">Population</div>
+                </div>
+                <!-- Land Area -->
+                <div class="infographic-tile">
+                    <span class="infographic-icon">📐</span>
+                    <div class="infographic-value">{{ "{:,.0f}".format(country.area) if country.area else 'N/A' }} km²</div>
+                    <div class="infographic-label">Land Area</div>
+                </div>
+            </div>
+
+            <!-- Wealth & Development Dashboard Card -->
+            <div class="detail-card mb-4">
+                <h2>📈 Wealth & Development</h2>
+                <div class="detail-grid" style="margin: 0; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 100px;">
+                        <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Nominal GDP</div>
+                        <div style="font-size: 1.4rem; font-weight: 800; color: var(--primary); margin: 6px 0;">
+                            {% if country.gdp_billion_usd %}
+                            ${{ "{:,}".format(country.gdp_billion_usd) }}B
+                            {% else %}
+                            N/A
+                            {% endif %}
+                        </div>
+                        {% if country.gdp_ranking %}
+                        <div style="display: inline-block; padding: 2px 8px; border-radius: 99px; background: rgba(247,201,72,0.15); color: var(--accent); font-size: 0.72rem; font-weight: 800; width: fit-content; margin: 0 auto;">
+                            🏆 Global Rank: #{{ country.gdp_ranking }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 100px;">
+                        <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">GDP (PPP)</div>
+                        <div style="font-size: 1.4rem; font-weight: 800; color: var(--primary); margin: 6px 0;">
+                            {% if country.gdp_ppp_billion_usd %}
+                            ${{ "{:,}".format(country.gdp_ppp_billion_usd) }}B
+                            {% else %}
+                            N/A
+                            {% endif %}
+                        </div>
+                        <div style="font-size: 0.72rem; color: var(--text-muted);">Purchasing Power Parity</div>
+                    </div>
+                    
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 100px;">
+                        <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">GDP per Capita</div>
+                        <div style="font-size: 1.4rem; font-weight: 800; color: var(--primary); margin: 6px 0;">
+                            {% if country.gdp_per_capita_usd %}
+                            ${{ "{:,}".format(country.gdp_per_capita_usd) }}
+                            {% else %}
+                            N/A
+                            {% endif %}
+                        </div>
+                        <div style="font-size: 0.72rem; color: var(--text-muted);">GDP per Person</div>
+                    </div>
+                    
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 100px;">
+                        <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Development (HDI)</div>
+                        <div style="font-size: 1.4rem; font-weight: 800; color: var(--primary); margin: 6px 0;">
+                            {% if country.undp_hdi %}
+                            {{ country.undp_hdi }}
+                            {% else %}
+                            N/A
+                            {% endif %}
+                        </div>
+                        {% if country.hdi_ranking %}
+                        <div style="display: inline-block; padding: 2px 8px; border-radius: 99px; background: rgba(99,202,183,0.15); color: var(--primary); font-size: 0.72rem; font-weight: 800; width: fit-content; margin: 0 auto;">
+                            🏆 Global Rank: #{{ country.hdi_ranking }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Geography, Rivers & Mountains Card -->
+            <div class="detail-card mb-4">
+                <h2>🏔️ Geography & Natural Wonders</h2>
+                {% if country.provinces_states %}
+                <p style="margin-bottom: 8px;"><strong>States & Provinces:</strong> <span style="color: var(--text);">{{ country.provinces_states }}</span></p>
+                {% endif %}
+                {% if country.major_rivers %}
+                <p style="margin-bottom: 8px;"><strong>Major Rivers:</strong> <span style="color: var(--text);">🌊 {{ country.major_rivers }}</span></p>
+                {% endif %}
+                {% if country.major_mountains %}
+                <p style="margin-bottom: 8px;"><strong>Major Mountains & Peaks:</strong> <span style="color: var(--text);">🏔️ {{ country.major_mountains }}</span></p>
+                {% endif %}
+                {% if country.geographic_features %}
+                <p style="margin-bottom: 8px;"><strong>Physical Features:</strong> <span style="color: var(--text);">🌋 {{ country.geographic_features }}</span></p>
+                {% endif %}
+                {% if country.climate %}
+                <p><strong>Climate & Weather:</strong> <span style="color: var(--text-muted); font-style: italic;">{{ country.climate }}</span></p>
+                {% endif %}
+            </div>
+
+            <!-- Cultural & Fun Card -->
+            <div class="detail-card mb-4">
+                <h2>🎭 Culture & National Symbols</h2>
+                {% if country.demonyms %}
+                <p style="margin-bottom: 12px;"><strong>People called:</strong> <span class="pill-badge neon-pink" style="margin-left: 6px;">{{ country.demonyms }}</span></p>
+                {% endif %}
+                
+                {% if country.languages %}
+                <p style="margin-bottom: 8px;"><strong>Languages Spoken:</strong></p>
+                <div style="margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 4px;">
+                    {% for code, name in country.languages.items() %}
+                    <span class="pill-badge {% if loop.index0 % 3 == 0 %}neon-green{% elif loop.index0 % 3 == 1 %}neon-pink{% else %}neon-blue{% endif %}">{{ name }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if country.state_religion or country.major_religions %}
+                <p style="margin-bottom: 8px;"><strong>🕌 Religion & Beliefs:</strong></p>
+                <div style="margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 8px;">
+                    {% if country.state_religion %}
+                    <span class="badge" style="background: rgba(247,201,72,0.12); border-color: rgba(247,201,72,0.3); color: var(--accent); margin: 0;">🕌 State Religion: {{ country.state_religion }}</span>
+                    {% endif %}
+                    {% if country.major_religions %}
+                    <span class="badge" style="background: rgba(99,202,183,0.12); border-color: rgba(99,202,183,0.3); color: var(--primary); margin: 0;">📊 Practiced: {{ country.major_religions }}</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if country.national_animal or country.national_bird or country.national_sport %}
+                <p style="margin-bottom: 8px;"><strong>🦁 National Symbols:</strong></p>
+                <div style="margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 8px;">
+                    {% if country.national_animal %}
+                    <span class="badge" style="background: rgba(247,201,72,0.12); border-color: rgba(247,201,72,0.3); color: var(--accent); margin: 0;">🐾 Animal: {{ country.national_animal }}</span>
+                    {% endif %}
+                    {% if country.national_bird %}
+                    <span class="badge" style="background: rgba(255,107,138,0.12); border-color: rgba(255,107,138,0.3); color: var(--accent2); margin: 0;">🦅 Bird: {{ country.national_bird }}</span>
+                    {% endif %}
+                    {% if country.national_sport %}
+                    <span class="badge" style="background: rgba(99,202,183,0.12); border-color: rgba(99,202,183,0.3); color: var(--primary); margin: 0;">🎮 Sport: {{ country.national_sport }}</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if country.famous_animals %}
+                <p style="margin-bottom: 10px;"><strong>Famous Wildlife:</strong> <span style="color: var(--text);">{{ country.famous_animals }} 🐾</span></p>
+                {% endif %}
+                
+                {% if country.fun_facts %}
+                <p><strong>Fun Fact:</strong> <span style="color: var(--text-muted); font-style: italic;">"{{ country.fun_facts }}"</span> 🤯</p>
+                {% elif country.trivia %}
+                <p><strong>Trivia:</strong> <span style="color: var(--text-muted); font-style: italic;">"{{ country.trivia }}"</span></p>
+                {% endif %}
+            </div>
+
+            {% if country.hello_phrase %}
+            <!-- Say Hello Card -->
+            <div class="detail-card mb-4" style="text-align: center;">
+                <h2>👋 Say Hello in {{ country.hello_language or country.name }}</h2>
+                <div style="margin: 24px 0;">
+                    <div style="font-size: 2.8rem; font-weight: 900; color: var(--primary); margin-bottom: 8px; letter-spacing: 1px;" id="helloPhrase">
+                        {{ country.hello_phrase }}
+                    </div>
+                    <div style="font-size: 1rem; color: var(--accent); font-style: italic; font-weight: 600; margin-bottom: 4px;">
+                        [ {{ country.hello_pronunciation }} ]
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 20px;">
+                        {{ country.hello_language }}
+                    </div>
+                    <button onclick="speakHello()" id="speakBtn"
+                        style="display: inline-flex; align-items: center; gap: 8px;
+                               padding: 12px 28px; border-radius: 99px;
+                               background: linear-gradient(135deg, var(--primary), #4ecaaf);
+                               color: var(--bg-deep); border: none;
+                               font-size: 0.95rem; font-weight: 800;
+                               cursor: pointer; transition: all 0.2s;
+                               box-shadow: 0 4px 16px rgba(99,202,183,0.3);">
+                        <span style="font-size: 1.2rem;">🔊</span> Listen
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Economic Details -->
+            <div class="detail-card mb-4">
+                <h2>💰 Economy & Money</h2>
+                {% if country.key_industries %}
+                <p style="margin-bottom: 8px;"><strong>Key Industries:</strong> <span style="color: var(--text);">{{ country.key_industries }}</span></p>
+                {% endif %}
+                {% if country.key_cities %}
+                <p style="margin-bottom: 8px;"><strong>Major Cities:</strong> <span style="color: var(--text);">{{ country.key_cities }}</span></p>
+                {% endif %}
+
+                {% if country.exports or country.imports %}
+                <div class="detail-grid" style="margin: 14px 0; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                    {% if country.exports %}
+                    <div style="background: rgba(99,202,183,0.03); border: 1px solid rgba(99,202,183,0.15); border-radius: var(--radius-sm); padding: 14px;">
+                        <strong style="color: var(--primary); display: block; margin-bottom: 6px;">📤 Major Exports</strong>
+                        <span style="font-size: 0.9rem; color: var(--text);">{{ country.exports }}</span>
+                    </div>
+                    {% endif %}
+                    {% if country.imports %}
+                    <div style="background: rgba(255,107,138,0.03); border: 1px solid rgba(255,107,138,0.15); border-radius: var(--radius-sm); padding: 14px;">
+                        <strong style="color: var(--accent2); display: block; margin-bottom: 6px;">📥 Major Imports</strong>
+                        <span style="font-size: 0.9rem; color: var(--text);">{{ country.imports }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                {% if country.currencies %}
+                <p style="margin-top: 14px; margin-bottom: 8px;"><strong>Official Currencies:</strong></p>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    {% for code, details in country.currencies.items() %}
+                    <div class="currency-item">
+                        <div class="currency-circle">{{ details.symbol or '$' }}</div>
+                        <div>
+                            <div class="currency-name">{{ details.name }}</div>
+                            <div class="currency-code">{{ code }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Geographic Context Card -->
+            <div class="detail-card">
+                <h2>🗺️ Geographic Context</h2>
+                <p><strong>Continent:</strong>
+                    <a href="{{ url_for('main.continent_detail', name=country.continent_name) }}" style="font-weight: 700;">{{ country.continent_name or 'N/A' }}</a>
+                </p>
+                <p style="margin-top: 6px;"><strong>Region:</strong> {{ country.region or 'N/A' }}</p>
+                <p style="margin-top: 6px;"><strong>Subregion:</strong> {{ country.subregion or 'N/A' }}</p>
+                {% if country.latitude is not none and country.longitude is not none %}
+                <p style="margin-top: 6px;"><strong>Center Coordinates:</strong> {{ "%.4f"|format(country.latitude) }}°{{ " N" if country.latitude >= 0 else " S" }}, {{ "%.4f"|format(country.longitude|abs) }}°{{ " E" if country.longitude >= 0 else " W" }}</p>
+                {% endif %}
+                {% if country.area %}
+                <p style="margin-top: 6px;"><strong>Area:</strong> {{ "{:,.0f}".format(country.area) }} km² <span style="color: var(--text-muted); font-size: 0.82rem;">({{ "{:,.0f}".format(country.area * 1000000) }} m² / {{ "{:,.0f}".format(country.area / 2.58999) }} sq mi)</span></p>
+                {% endif %}
+                {% if country.latitude is not none %}
+                <p style="margin-top: 6px;"><strong>Climate Zone:</strong>
+                    {% if country.latitude|abs <= 23.4366 %}
+                    🌴 Tropics <span style="color: var(--text-muted); font-size: 0.82rem;">(between Tropic of Cancer & Capricorn)</span>
+                    {% elif country.latitude|abs <= 66.5634 %}
+                    🌤️ Temperate <span style="color: var(--text-muted); font-size: 0.82rem;">({{ "N" if country.latitude >= 0 else "S" }} temperate zone)</span>
+                    {% else %}
+                    ❄️ Polar <span style="color: var(--text-muted); font-size: 0.82rem;">({{ "Arctic" if country.latitude >= 0 else "Antarctic" }} circle)</span>
+                    {% endif %}
+                </p>
+                {% endif %}
+                {% if country.timezones %}
+                <p style="margin-top: 6px;"><strong>🕐 Time Zones:</strong></p>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;">
+                    {% for tz in country.timezones %}
+                    <span class="badge" style="font-size: 0.75rem;">{{ tz }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% if country.start_of_week %}
+                <p style="margin-top: 6px;"><strong>Start of Week:</strong> {{ country.start_of_week | title }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Right Column: Interactive Map & Borders & Resources -->
+        <div>
+            <!-- Leaflet Interactive Mini-map Card -->
+            <div class="country-minimap-card mb-4">
+                <h3 style="margin-bottom: 12px; font-family: 'Outfit'; font-weight: 700; color: var(--primary);">📍 Interactive Location</h3>
+                {% if country.latitude is not none and country.longitude is not none %}
+                <div id="mini-map"></div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-top: 10px;">
+                    <span>Lat: {{ "%.4f"|format(country.latitude) }}°</span>
+                    <span>Lng: {{ "%.4f"|format(country.longitude) }}°</span>
+                </div>
+                {% else %}
+                <div style="height: 280px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg-deep); border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.06); text-align: center; padding: 20px;">
+                    <span style="font-size: 3rem; margin-bottom: 12px;">🗺️</span>
+                    <p style="font-size: 0.9rem; color: var(--text-muted);">Coordinates not available for mapping.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Borders Showcase Card -->
+            <div class="detail-card mb-4">
+                <h2>🤝 Bordering Countries</h2>
+                {% if border_countries %}
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">Click a bordering country to view its profile:</p>
+                <div class="borders-grid">
+                    {% for border in border_countries %}
+                    <a href="{{ url_for('main.country_detail', name=border.name) }}" class="border-badge">
+                        {% if border.flag_url_svg or border.flag_url_png %}
+                        <img src="{{ border.flag_url_svg or border.flag_url_png }}" alt="{{ border.name }} flag" class="border-flag-circle">
+                        {% else %}
+                        <span class="border-flag-circle" style="display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.1); font-size: 0.6rem;">🗺️</span>
+                        {% endif %}
+                        <span>{{ border.name }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <!-- Cozy ocean island card -->
+                <div style="text-align: center; padding: 24px; background: rgba(99,202,183,0.04); border: 1.5px dashed rgba(99,202,183,0.25); border-radius: var(--radius-md); margin-top: 10px;">
+                    <span style="font-size: 2.8rem; display: block; margin-bottom: 8px;">🏝️</span>
+                    <strong style="color: var(--primary); display: block; font-size: 1rem; margin-bottom: 4px;">Cozy Ocean Island</strong>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0;">This country has no land borders. It is completely surrounded by pristine waters!</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Resources & Links -->
+            <div class="detail-card">
+                <h2>🔗 External Resources</h2>
+                <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+                    {% if country.coat_of_arms_url_svg or country.coat_of_arms_url_png %}
+                    <div style="text-align: center; flex-shrink: 0;">
+                        <p style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 8px;">Coat of Arms</p>
+                        <img src="{{ country.coat_of_arms_url_svg or country.coat_of_arms_url_png }}"
+                            alt="Coat of Arms of {{ country.name }}"
+                            style="max-width: 90px; max-height: 90px; border-radius: 8px; border: 1px solid var(--border); padding: 8px; background: rgba(255,255,255,0.02); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+                    </div>
+                    {% endif %}
+                    <div style="flex-grow: 1;">
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">Explore this country on external maps:</p>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            {% if country.maps_google %}
+                            <a href="{{ country.maps_google }}" target="_blank" rel="noopener" class="action-btn" style="margin: 0; display: inline-flex; justify-content: center; width: 100%;">Google Maps 🗺️</a>
+                            {% endif %}
+                            {% if country.maps_osm %}
+                            <a href="{{ country.maps_osm }}" target="_blank" rel="noopener" class="action-btn" style="margin: 0; display: inline-flex; justify-content: center; width: 100%;">OpenStreetMap 📍</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Back Navigation -->
+    <div class="back-btn-container">
+        <a href="{{ url_for('main.list_countries') }}" class="btn btn-ghost">← Back to Countries</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+{% if country.latitude is not none and country.longitude is not none %}
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const lat = {{ country.latitude }};
+        const lng = {{ country.longitude }};
+        
+        // Custom dark styled mini-map
+        const map = L.map('mini-map', { 
+            zoomControl: false, 
+            attributionControl: false,
+            scrollWheelZoom: false,
+            doubleClickZoom: false,
+            boxZoom: false,
+            dragPan: false,
+            touchZoom: false
+        }).setView([lat, lng], 5);
+        
+        // CartoDB Dark Matter tiles for premium dark neon vibe
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            maxZoom: 20
+        }).addTo(map);
+        
+        // Add subtle pulsing boundary circle
+        L.circle([lat, lng], { 
+            color: '#63cab7', 
+            fillColor: '#63cab7', 
+            fillOpacity: 0.1, 
+            radius: 120000 
+        }).addTo(map);
+        
+        // Add glowing neon marker center
+        L.circleMarker([lat, lng], { 
+            radius: 6, 
+            color: '#63cab7', 
+            fillColor: '#0a0e1a', 
+            fillOpacity: 0.9, 
+            weight: 3 
+        }).addTo(map);
+
+        // Standard Leaflet layout resolution inside flex containers
+        setTimeout(function() {
+            map.invalidateSize();
+        }, 200);
+    });
+</script>
+{% endif %}
+
+{% if country.hello_phrase %}
+<script>
+// BCP-47 language code mapping for Web Speech API
+const LANG_CODES = {
+    'Arabic': 'ar', 'Bengali': 'bn', 'Mandarin Chinese': 'zh-CN', 'Croatian': 'hr',
+    'Czech': 'cs', 'Danish': 'da', 'Dutch': 'nl', 'English': 'en', 'Estonian': 'et',
+    'Filipino': 'fil', 'Finnish': 'fi', 'French': 'fr', 'Georgian': 'ka', 'German': 'de',
+    'Greek': 'el', 'Hebrew': 'he', 'Hindi': 'hi', 'Hungarian': 'hu', 'Icelandic': 'is',
+    'Indonesian': 'id', 'Irish': 'ga', 'Italian': 'it', 'Japanese': 'ja', 'Kazakh': 'kk',
+    'Khmer': 'km', 'Korean': 'ko', 'Lao': 'lo', 'Latvian': 'lv', 'Lithuanian': 'lt',
+    'Macedonian': 'mk', 'Malay': 'ms', 'Maltese': 'mt', 'Mongolian': 'mn', 'Nepali': 'ne',
+    'Norwegian': 'no', 'Pashto': 'ps', 'Persian': 'fa', 'Polish': 'pl', 'Portuguese': 'pt',
+    'Romanian': 'ro', 'Russian': 'ru', 'Serbian': 'sr', 'Sinhala': 'si', 'Slovak': 'sk',
+    'Slovene': 'sl', 'Somali': 'so', 'Spanish': 'es', 'Swahili': 'sw', 'Swedish': 'sv',
+    'Tamil': 'ta', 'Thai': 'th', 'Turkish': 'tr', 'Ukrainian': 'uk', 'Urdu': 'ur',
+    'Uzbek': 'uz', 'Vietnamese': 'vi', 'Amharic': 'am', 'Armenian': 'hy',
+    'Azerbaijani': 'az', 'Bosnian': 'bs', 'Bulgarian': 'bg', 'Burmese': 'my',
+    'Albanian': 'sq', 'Afrikaans': 'af', 'Zulu': 'zu', 'Xhosa': 'xh',
+    'Catalan': 'ca', 'Dari': 'fa-AF',
+};
+
+function speakHello() {
+    const phrase = {{ country.hello_phrase | tojson }};
+    const lang = {{ country.hello_language | tojson }};
+    const btn = document.getElementById('speakBtn');
+
+    if (!('speechSynthesis' in window)) {
+        btn.innerHTML = '<span style="font-size:1.2rem">❌</span> Not supported';
+        return;
+    }
+
+    // Cancel any ongoing speech
+    speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(phrase);
+    const code = LANG_CODES[lang] || 'en';
+    utterance.lang = code;
+    utterance.rate = 0.8;
+    utterance.pitch = 1;
+
+    // Try to find a matching voice
+    const voices = speechSynthesis.getVoices();
+    const match = voices.find(v => v.lang.startsWith(code));
+    if (match) utterance.voice = match;
+
+    // Button animation
+    btn.innerHTML = '<span style="font-size:1.2rem">🔊</span> Speaking...';
+    btn.style.background = 'linear-gradient(135deg, var(--accent), #f0b429)';
+
+    utterance.onend = () => {
+        btn.innerHTML = '<span style="font-size:1.2rem">🔊</span> Listen';
+        btn.style.background = 'linear-gradient(135deg, var(--primary), #4ecaaf)';
+    };
+    utterance.onerror = () => {
+        btn.innerHTML = '<span style="font-size:1.2rem">🔊</span> Listen';
+        btn.style.background = 'linear-gradient(135deg, var(--primary), #4ecaaf)';
+    };
+
+    speechSynthesis.speak(utterance);
+}
+
+// Preload voices (some browsers load async)
+if ('speechSynthesis' in window) {
+    speechSynthesis.getVoices();
+    speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+}
+</script>
+{% endif %}
+{% endblock %}

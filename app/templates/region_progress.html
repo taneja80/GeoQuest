@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Region Progress{% endblock %}
+
+{% block content %}
+<div class="animate-fade">
+    <span class="section-label">🗺️ Region Unlock</span>
+    <h1 style="margin-bottom: 8px;">World Explorer Map</h1>
+    <p style="margin-bottom: 24px;">
+        Answer questions about each continent to unlock regions!
+        <strong style="color: var(--accent);">{{ unlocked_count }}/{{ total_count }}</strong> unlocked.
+    </p>
+
+    <div class="region-grid">
+        {% for region in regions %}
+        <div class="region-card {{ 'unlocked' if region.unlocked else 'locked' }}">
+            <div class="region-icon">{{ region.icon }}</div>
+            <h3>{{ region.name }}</h3>
+
+            {% if region.unlocked %}
+            <span class="region-status unlocked-status">✅ Unlocked!</span>
+            {% else %}
+            <span class="region-status">{{ region.correct }}/{{ region.threshold }} correct</span>
+            {% endif %}
+
+            <div class="region-bar-wrap">
+                <div class="region-bar-fill {{ 'full' if region.unlocked }}" style="width: {{ region.pct }}%"></div>
+            </div>
+
+            <span class="region-pct">{{ region.pct }}%</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div style="text-align:center; margin-top: 32px;">
+        <a href="{{ url_for('main.quiz') }}" class="btn">🎮 Play Quiz to Unlock More</a>
+    </div>
+</div>
+{% endblock %}

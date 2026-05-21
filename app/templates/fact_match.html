@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Fact Match{% endblock %}
+
+{% block head_extra %}
+<style>
+  .fm-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-md); padding: 32px 28px;
+    max-width: 800px; margin: 0 auto;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.37);
+  }
+  .fm-subtitle { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 24px; }
+  .fm-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+  }
+  .fm-col-title { font-weight: 800; color: var(--primary); margin-bottom: 12px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; }
+  .fm-item {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.03); border: 2px solid rgba(255,255,255,0.08);
+    border-radius: var(--radius-sm); padding: 12px 14px;
+    cursor: pointer; transition: all var(--transition);
+    user-select: none;
+  }
+  .fm-item:hover:not(.matched):not(.wrong) {
+    border-color: var(--primary); background: rgba(99,202,183,0.08);
+  }
+  .fm-item.selected { border-color: var(--accent); background: rgba(247,201,72,0.12); }
+  .fm-item.matched { border-color: var(--success); background: rgba(74,222,128,0.1); opacity: 0.6; pointer-events: none; }
+  .fm-item.wrong { border-color: var(--danger); background: rgba(248,113,113,0.1); animation: fm-shake 0.4s; }
+  @keyframes fm-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+  .fm-flag { width: 36px; height: 24px; object-fit: cover; border-radius: 4px; }
+  .fm-name { font-weight: 700; font-size: 0.9rem; }
+  .fm-results { text-align: center; margin-top: 24px; }
+  .fm-results .score { font-size: 1.6rem; font-weight: 800; }
+  .fm-results .score.win { color: var(--success); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="animate-fade">
+  <span class="section-label">🔗 Fact Match</span>
+  <h1 style="margin-bottom: 8px;">Match 'Em Up!</h1>
+  <p style="margin-bottom: 32px;">Match each country with its {{ round_data.fact_label if round_data else 'fact' }}.</p>
+
+  {% if round_data %}
+  <div class="fm-card" id="fmCard">
+    <div class="fm-subtitle">Tap a country, then tap its matching {{ round_data.fact_label }}.</div>
+    <div class="fm-grid">
+      <div>
+        <div class="fm-col-title">🌍 Countries</div>
+        <div id="countriesCol">
+          {% for p in round_data.pairs %}
+          <div class="fm-item fm-country" data-id="{{ p.country_id }}" style="margin-bottom: 8px;" onclick="selectCountry(this)">
+            {% if p.flag %}
+            <img src="{{ p.flag }}" class="fm-flag" alt="{{ p.country_name }}">
+            {% endif %}
+            <span class="fm-name">{{ p.country_name }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div>
+        <div class="fm-col-title">📋 {{ round_data.fact_label }}</div>
+        <div id="factsCol">
+        </div>
+      </div>
+    </div>
+    <div class="fm-results" id="fmResults" style="display:none;">
+      <div class="score" id="fmScore"></div>
+      <a href="{{ url_for('main.fact_match') }}" class="btn btn-primary" style="margin-top: 16px;">Play Again →</a>
+    </div>
+  </div>
+  {% else %}
+  <div class="fm-card" style="text-align:center;">
+    <p>Not enough country data to generate a match round.</p>
+    <a href="{{ url_for('main.quiz') }}" class="btn btn-primary" style="margin-top: 16px;">Play Quiz 🎮</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+{% if round_data %}
+<script>
+const pairs = {{ round_data.pairs | tojson }};
+// Shuffle facts
+const shuffledFacts = [...pairs].sort(() => Math.random() - 0.5);
+const factsCol = document.getElementById('factsCol');
+shuffledFacts.forEach(p => {
+  const div = document.createElement('div');
+  div.className = 'fm-item fm-fact';
+  div.dataset.id = p.country_id;
+  div.style.marginBottom = '8px';
+  div.innerHTML = `<span class="fm-name">${p.fact}</span>`;
+  div.onclick = function() { selectFact(this); };
+  factsCol.appendChild(div);
+});
+
+let selectedCountry = null;
+let matchedCount = 0;
+let correctCount = 0;
+const total = pairs.length;
+
+function selectCountry(el) {
+  if (el.classList.contains('matched')) return;
+  document.querySelectorAll('.fm-country').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedCountry = el;
+}
+
+function selectFact(el) {
+  if (!selectedCountry || el.classList.contains('matched')) return;
+
+  const countryId = selectedCountry.dataset.id;
+  const factId = el.dataset.id;
+
+  if (countryId === factId) {
+    selectedCountry.classList.remove('selected');
+    selectedCountry.classList.add('matched');
+    el.classList.add('matched');
+    matchedCount++;
+    correctCount++;
+  } else {
+    el.classList.add('wrong');
+    selectedCountry.classList.add('wrong');
+    matchedCount++;
+    setTimeout(() => {
+      el.classList.remove('wrong');
+      selectedCountry.classList.remove('wrong', 'selected');
+      selectedCountry = null;
+    }, 500);
+    return;
+  }
+
+  selectedCountry = null;
+
+  if (matchedCount === total) {
+    // Submit results
+    fetch('{{ url_for("main.fact_match_complete") }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ correct: correctCount, total: total }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        const res = document.getElementById('fmResults');
+        const score = document.getElementById('fmScore');
+        score.className = 'score' + (correctCount === total ? ' win' : '');
+        score.textContent = `${correctCount}/${total} Matched! +${data.xp_earned} XP`;
+        res.style.display = 'block';
+      });
+  }
+}
+</script>
+{% endif %}
+{% endblock %}

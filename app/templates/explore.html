@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Explore {{ feature_type }}{% endblock %}
+
+{% block content %}
+<div class="animate-fade">
+    {% set meta = {
+        'Oceans':    {'icon': '🌊', 'label': 'Earth\'s Waters'},
+        'Mountains': {'icon': '⛰️', 'label': 'Peaks & Summits'},
+        'Rivers':    {'icon': '🏞️', 'label': 'Waterways'},
+        'Deserts':   {'icon': '🏜️', 'label': 'Arid Lands'},
+        'Forests':   {'icon': '🌲', 'label': 'Wild Forests'},
+        'Volcanoes': {'icon': '🌋', 'label': 'Fire & Earth'},
+        'Wonders':   {'icon': '🏛️', 'label': 'Wonders of the World'}
+    } %}
+    {% set info = meta.get(feature_type, {'icon': '🗺️', 'label': 'Natural Features'}) %}
+
+    <span class="section-label">{{ info.label }}</span>
+    <h1>{{ info.icon }} {{ feature_type }}</h1>
+
+    {% if items %}
+    <p style="margin-bottom: 24px;">{{ items|length }} {{ feature_type|lower }} to discover.</p>
+    <div class="explore-grid">
+        {% for item in items %}
+        <div class="explore-card">
+            <strong>{{ item.name }}</strong>
+
+            <div>
+            {% if item.location is defined and item.location %}
+            <span class="stat">📍 {{ item.location }}</span>
+            {% endif %}
+            {% if item.elevation_m is defined and item.elevation_m %}
+            <span class="stat">⛰️ {{ "{:,}".format(item.elevation_m) }} m</span>
+            {% endif %}
+            {% if item.length_km is defined and item.length_km %}
+            <span class="stat">📏 {{ "{:,}".format(item.length_km) }} km</span>
+            {% endif %}
+            {% if item.area_sq_km is defined and item.area_sq_km %}
+            <span class="stat">📐 {{ "{:,.0f}".format(item.area_sq_km) }} km² <span style="color:var(--text-muted); font-size:0.72rem;">({{ "{:,.0f}".format(item.area_sq_km * 1000000) }} m²)</span></span>
+            {% endif %}
+            {% if item.avg_depth_m is defined and item.avg_depth_m %}
+            <span class="stat">🌊 Avg {{ "{:,}".format(item.avg_depth_m) }} m deep</span>
+            {% endif %}
+            {% if item.max_depth_m is defined and item.max_depth_m %}
+            <span class="stat">⬇️ Max {{ "{:,}".format(item.max_depth_m) }} m deep</span>
+            {% endif %}
+            {% if item.status is defined and item.status %}
+            <span class="stat">🔥 {{ item.status }}</span>
+            {% endif %}
+            {% if item.year_built is defined and item.year_built %}
+            <span class="stat">🏗️ {{ item.year_built }}</span>
+            {% endif %}
+            {% if item.latitude is defined and item.latitude is not none and item.longitude is defined and item.longitude is not none %}
+            <span class="stat">🧭 {{ "%.2f"|format(item.latitude) }}°{{ "N" if item.latitude >= 0 else "S" }}, {{ "%.2f"|format(item.longitude|abs) }}°{{ "E" if item.longitude >= 0 else "W" }}</span>
+            {% endif %}
+            </div>
+
+            {% if item.description %}
+            <p style="margin-top: 10px;">{{ item.description }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center; padding: 60px 20px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md); margin-top: 24px;">
+        <p>Information about {{ feature_type }} is coming soon!</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

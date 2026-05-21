@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block title %}Quiz{% endblock %}
+
+{% block content %}
+<div class="quiz-wrapper animate-fade">
+    <span class="section-label">🎮 Geography Quiz</span>
+    <h1 style="margin-bottom: 20px;">Quiz Time!</h1>
+
+    {% if mode and mode != 'classic' %}
+    <div style="text-align:center; margin-bottom: 12px;">
+        <span class="diff-badge" style="font-size: 0.9rem;">{{ mode_cfg.icon }} {{ mode_cfg.name }} Mode &nbsp;·&nbsp; {{ '%.1g' | format(mode_cfg.xp_multiplier) }}× XP</span>
+    </div>
+    {% endif %}
+
+    <!-- ── HUD bar ── -->
+    <div class="quiz-header">
+        <div>
+            <span class="hud-label">Hero</span><br>
+            <span class="quiz-hero-name">⚔️ {{ session.username }}</span>
+        </div>
+
+        <!-- Timer (filled by JS) -->
+        <div style="text-align:center;">
+            <span class="hud-label">Time</span><br>
+            <div class="timer-ring-wrap">
+                <svg class="timer-ring" viewBox="0 0 36 36" id="timer-svg">
+                    <circle class="timer-bg" cx="18" cy="18" r="15.9"/>
+                    <circle class="timer-fg" id="timer-arc" cx="18" cy="18" r="15.9"
+                            stroke-dasharray="100 100" stroke-dashoffset="0"/>
+                </svg>
+                <span id="timer-num" class="timer-num">{{ mode_cfg.timer_sec if mode_cfg and mode_cfg.timer_sec > 0 else '∞' }}</span>
+            </div>
+        </div>
+
+        <!-- Score (updated by JS) -->
+        <div style="text-align:center;">
+            <span class="hud-label">Score</span><br>
+            <span class="quiz-score-display" id="hud-score">—</span>
+        </div>
+
+        <!-- Streak -->
+        <div style="text-align:center;">
+            <span class="hud-label">Streak</span><br>
+            <span class="streak-display" id="hud-streak">
+                {% if streak and streak > 0 %}🔥 {{ streak }}{% else %}—{% endif %}
+            </span>
+        </div>
+
+        <!-- Lives -->
+        <div style="text-align:right;">
+            <span class="hud-label">Lives</span><br>
+            <span class="lives-display" id="hud-lives">
+                {% for i in range(session.get('lives', 3)) %}❤️{% endfor %}{% for i in range(3 - session.get('lives', 3)) %}🖤{% endfor %}
+            </span>
+        </div>
+    </div>
+
+    {% if error_message %}
+    <div id="result" class="incorrect" style="display:block; margin-top:16px;">⚠️ {{ error_message }}</div>
+
+    {% elif question %}
+    <!-- Difficulty badge -->
+    <div style="text-align:center; margin-bottom: 8px;">
+        {% if question.difficulty == 1 %}
+        <span class="diff-badge diff-easy">⭐ Easy</span>
+        {% elif question.difficulty == 2 %}
+        <span class="diff-badge diff-medium">⭐⭐ Medium</span>
+        {% else %}
+        <span class="diff-badge diff-hard">⭐⭐⭐ Hard</span>
+        {% endif %}
+        <span class="diff-badge" style="margin-left:6px;">{{ question.question_type | title }}</span>
+    </div>
+
+    <div id="quiz-container">
+        <form id="quiz-form">
+            <!-- Hidden timing field -->
+            <input type="hidden" id="time-taken-ms" name="time_taken_ms" value="0">
+
+            {% if question.image_url %}
+            <div style="text-align:center;">
+                <img src="{{ question.image_url }}" alt="Quiz Image"
+                     style="max-width:220px; border-radius:10px; border:1px solid var(--border); box-shadow:0 8px 24px rgba(0,0,0,0.4); margin-bottom:20px;">
+            </div>
+            {% endif %}
+
+            <p id="question-text">{{ question.question }}</p>
+
+            <div class="quiz-options" id="quiz-options">
+                {% for option in question.options %}
+                <input type="radio" name="answer" value="{{ option }}" id="option_{{ loop.index }}" required>
+                <label for="option_{{ loop.index }}" class="quiz-option-label">{{ option }}</label>
+                {% endfor %}
+            </div>
+
+            <!-- Action buttons row -->
+            <div class="quiz-action-row">
+                <button type="button" class="btn btn-ghost hint-btn" id="hint-btn"
+                        style="font-size:0.85rem; padding:8px 18px;">
+                    💡 Hint <span style="opacity:0.6; font-size:0.75rem;">(-20 pts)</span>
+                </button>
+                <div id="submit-btn-container">
+                    <button type="submit" class="btn" id="submit-btn">🚀 Submit Answer</button>
+                </div>
+            </div>
+
+            <div class="text-center" id="play-again-container" style="display:none; margin-top:16px;">
+                <a href="{{ url_for('main.quiz', mode=mode or 'classic') }}" class="btn btn-accent">Play Again 🔄</a>
+            </div>
+        </form>
+
+        <div id="result"></div>
+
+        <!-- Bonus breakdown (hidden until answer) -->
+        <div id="bonus-breakdown" style="display:none;"></div>
+    </div>
+
+    {% else %}
+    <div id="quiz-container" style="text-align:center; padding: 40px;">
+        <p>⚠️ Could not load a question. Please <a href="{{ url_for('main.quiz') }}">refresh</a>!</p>
+    </div>
+    {% endif %}
+
+    <div class="flex-center mt-4">
+        <a href="{{ url_for('main.leaderboard') }}" class="btn btn-ghost" style="font-size:0.9rem;">🏆 Leaderboard</a>
+        <a href="{{ url_for('main.index') }}" class="btn btn-ghost" style="font-size:0.9rem;">🏠 Home</a>
+    </div>
+</div>
+
+<style>
+/* ── HUD ── */
+.hud-label { color: var(--text-muted); font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+.quiz-score-display { font-size: 1.3rem; font-weight: 900; color: var(--accent); }
+.streak-display { font-size: 1.2rem; font-weight: 900; color: #f97316; }
+
+/* ── Timer ring ── */
+.timer-ring-wrap { position: relative; width: 42px; height: 42px; margin: 4px auto 0; }
+.timer-ring { width: 42px; height: 42px; transform: rotate(-90deg); }
+.timer-bg  { fill: none; stroke: rgba(255,255,255,0.07); stroke-width: 3; }
+.timer-fg  { fill: none; stroke: var(--primary); stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset 1s linear, stroke 0.3s; }
+.timer-fg.warn   { stroke: var(--accent); }
+.timer-fg.danger { stroke: var(--danger); }
+.timer-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 900; color: var(--text); }
+
+/* ── Difficulty badges ── */
+.diff-badge { display: inline-block; padding: 3px 12px; border-radius: 99px; font-size: 0.75rem; font-weight: 800; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); }
+.diff-easy   { color: var(--success); border-color: rgba(74,222,128,0.3); background: rgba(74,222,128,0.08); }
+.diff-medium { color: var(--accent);  border-color: rgba(247,201,72,0.3);  background: rgba(247,201,72,0.08); }
+.diff-hard   { color: var(--danger);  border-color: rgba(248,113,113,0.3); background: rgba(248,113,113,0.08); }
+
+/* ── Quiz options: animate out eliminated ones ── */
+.quiz-option-label.eliminated {
+    opacity: 0.2 !important;
+    pointer-events: none !important;
+    text-decoration: line-through;
+    border-style: dashed !important;
+    transform: none !important;
+}
+
+/* ── Action row ── */
+.quiz-action-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+/* ── Bonus breakdown ── */
+#bonus-breakdown {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.bonus-chip {
+    padding: 4px 14px;
+    border-radius: 99px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    border: 1px solid;
+    animation: popIn 0.35s cubic-bezier(.34,1.56,.64,1) both;
+}
+.chip-base   { background: rgba(99,202,183,0.12);  border-color: rgba(99,202,183,0.3);  color: var(--primary); }
+.chip-speed  { background: rgba(247,201,72,0.12);  border-color: rgba(247,201,72,0.3);  color: var(--accent); }
+.chip-streak { background: rgba(249,115,22,0.12);  border-color: rgba(249,115,22,0.3);  color: #f97316; }
+
+/* ── Hint button state ── */
+.hint-btn:disabled { opacity: 0.35; pointer-events: none; }
+</style>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+    // Pass server-side config to JS
+    window.INITIAL_STREAK = {{ streak | tojson }};
+    window.QUIZ_MODE = {{ (mode or 'classic') | tojson }};
+    window.QUIZ_TIMER_SEC = {{ (mode_cfg.timer_sec if mode_cfg else 15) | tojson }};
+    window.QUIZ_POST_URL = {{ url_for('main.quiz', mode=mode or 'classic') | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/quiz.js') }}"></script>
+{% endblock %}

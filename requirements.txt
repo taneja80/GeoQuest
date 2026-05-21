@@ -1,0 +1,7 @@
+Flask==2.3.3
+Flask-SQLAlchemy==3.0.5
+Flask-Migrate==4.0.5  # Added for database migrations
+requests==2.31.0
+APScheduler==3.10.4
+beautifulsoup4==4.12.2  # Kept if planning advanced scraping later, not strictly needed for REST API
+python-dotenv==1.0.0 # For .env file management

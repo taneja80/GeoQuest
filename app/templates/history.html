@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Quiz History{% endblock %}
+
+{% block head_extra %}
+<style>
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    padding: 8px 18px;
+    border-radius: 99px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-decoration: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    background: transparent;
+    transition: all var(--transition);
+  }
+  .filter-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(99,202,183,0.08);
+  }
+  .filter-btn.active {
+    background: rgba(99,202,183,0.15);
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px 20px;
+    transition: all var(--transition);
+  }
+  .history-item:hover {
+    border-color: rgba(255,255,255,0.12);
+    background: var(--bg-card-hover);
+  }
+  .history-icon {
+    font-size: 1.5rem;
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .history-icon.correct {
+    background: rgba(74,222,128,0.12);
+  }
+  .history-icon.wrong {
+    background: rgba(248,113,113,0.12);
+  }
+  .history-body {
+    flex: 1;
+    min-width: 0;
+  }
+  .history-question {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .history-answers {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+  .history-answers .correct-ans {
+    color: var(--success);
+    font-weight: 700;
+  }
+  .history-answers .wrong-ans {
+    color: var(--danger);
+    font-weight: 700;
+    text-decoration: line-through;
+  }
+  .history-meta {
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .history-type {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .history-time {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--text-muted);
+  }
+  .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="animate-fade">
+  <span class="section-label">📜 Quiz History</span>
+  <h1 style="margin-bottom: 8px;">Your Quiz Log</h1>
+  <p style="margin-bottom: 24px;">Review your answers — turn mistakes into knowledge.</p>
+
+  <div class="filter-bar">
+    <a href="{{ url_for('main.quiz_history', filter='all') }}" class="filter-btn {% if current_filter == 'all' %}active{% endif %}">📋 All</a>
+    <a href="{{ url_for('main.quiz_history', filter='wrong') }}" class="filter-btn {% if current_filter == 'wrong' %}active{% endif %}">❌ Wrong Only</a>
+    <a href="{{ url_for('main.quiz_history', filter='correct') }}" class="filter-btn {% if current_filter == 'correct' %}active{% endif %}">✅ Correct Only</a>
+  </div>
+
+  {% if attempts %}
+  <div class="history-list">
+    {% for a in attempts %}
+    <div class="history-item">
+      <div class="history-icon {% if a.is_correct %}correct{% else %}wrong{% endif %}">
+        {% if a.is_correct %}✅{% else %}❌{% endif %}
+      </div>
+      <div class="history-body">
+        <div class="history-question">{{ a.question_text }}</div>
+        <div class="history-answers">
+          {% if a.is_correct %}
+            <span class="correct-ans">{{ a.correct_answer }}</span>
+          {% else %}
+            You answered: <span class="wrong-ans">{{ a.submitted_answer }}</span>
+            &nbsp;·&nbsp; Correct: <span class="correct-ans">{{ a.correct_answer }}</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="history-meta">
+        <div class="history-type">{{ a.question_type }}</div>
+        <div class="history-time">{{ a.created_at.strftime('%b %d, %H:%M') if a.created_at else '' }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="progress-card" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 28px;">
+    <div class="empty-state">
+      <div class="icon">📜</div>
+      <h3>No quiz history yet</h3>
+      <p>Start answering questions to build your history!</p>
+      <a href="{{ url_for('main.quiz') }}" class="btn btn-primary" style="margin-top: 16px;">Play Quiz 🎮</a>
+    </div>
+  </div>
+  {% endif %}
+
+  <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 24px;">
+    <a href="{{ url_for('main.progress_report') }}" class="btn btn-ghost" style="font-size: 0.8rem;">📊 Progress</a>
+    <a href="{{ url_for('main.mastery') }}" class="btn btn-ghost" style="font-size: 0.8rem;">⭐ Mastery</a>
+    <a href="{{ url_for('main.quiz') }}" class="btn btn-primary" style="font-size: 0.8rem;">🎮 Play Quiz</a>
+  </div>
+</div>
+{% endblock %}
